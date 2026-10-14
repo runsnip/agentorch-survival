@@ -18,6 +18,7 @@ import { WEAPONS, AMMO, buildGun } from './weapons.js';
 import { createHud } from './hud.js';
 import { dress, SLOTS, SLOT_NAMES } from './accessories.js';
 import { t, lang } from '/i18n.js';
+import { audio } from '/audio.js';   // the app's music and shared sounds (host API 2)
 
 const LOCALE = lang === 'vi' ? 'vi-VN' : lang;
 const BASE = new URL('./', import.meta.url).href;
@@ -213,6 +214,7 @@ export function createArena({ call, agents: agentSource = [], onExit }) {
     document.exitPointerLock?.();
     call('arenaWallet');
     renderSkins(); renderSetup(); renderMaps(); renderGear();
+    audio.music('lobby');
     const s = skins.find((x) => x.id === sel.skin);
     if (s) showSkin(s);
   }
@@ -220,7 +222,7 @@ export function createArena({ call, agents: agentSource = [], onExit }) {
   // ---------------------------------------------------------------- match
   // anonymous usage (the app keeps only event names and properties it knows, see agentorch/telemetry.py)
   const track = (event, props) => call('track', event, JSON.stringify(props));
-  let matchAt = 0;
+  let matchAt = 0, shotHeat = 0, stepT = 0;
   async function startMatch() {
     endMatch();
     root.className = 'arena loading';
@@ -242,7 +244,7 @@ export function createArena({ call, agents: agentSource = [], onExit }) {
         hitmark: (kill, head) => { hud.hitmark(kill, head); sound.play(kill ? 'kill' : 'hit'); },
         hurt: (angle) => { hud.hurt(angle, look.yaw); sound.play('hurt'); },
         message: (t) => hud.message(t),
-        shot: (u, d) => sound.shot(d.cat, u.isPlayer ? 0 : u.pos.distanceTo(match.player.pos)),
+        shot: (u, d) => { const dist = u.isPlayer ? 0 : u.pos.distanceTo(match.player.pos); sound.shot(d.cat, dist); if (dist < 60) shotHeat = Math.min(0.45, shotHeat + 0.06); },
         sound: (k) => sound.play(k),
         end: (r) => showEnd(r),
       },
@@ -258,6 +260,7 @@ export function createArena({ call, agents: agentSource = [], onExit }) {
     hud.message(t('Vào trận! Nhặt vũ khí, ở trong vùng an toàn và sống sót.'), 4);
     canvas.requestPointerLock?.();
     // the starter chosen in the lobby: the app takes it out of the inventory and says what it does
+    audio.music('battle'); audio.setTension(0.1);
     track('game_start', { map: sel.map, bots: sel.bots, agent_bot: !!agentBot, agent_level: agentBot ? sel.level : 'none', starter: sel.starter || 'none' });
     matchAt = performance.now();
     if (sel.starter) { call('arenaStarter', sel.starter); sel.starter = ''; }
@@ -281,6 +284,7 @@ export function createArena({ call, agents: agentSource = [], onExit }) {
     hud?.el.remove(); hud = null;
   }
   function showEnd(r) {
+    audio.music(null); audio.sting(r.win ? 'victory' : 'defeat');
     track('game_end', { place: r.win ? 1 : r.rank, kills: match?.player.kills || 0, minutes: Math.round((performance.now() - matchAt) / 60000) });
     setTimeout(() => {
       if (!match) return;
@@ -457,6 +461,18 @@ export function createArena({ call, agents: agentSource = [], onExit }) {
     sun.position.set(cx + island.sunDir.x * 200, island.sunDir.y * 200, cz + island.sunDir.z * 200);
     sun.target.position.set(cx, 0, cz);
     island.update(dt, camera.position);
+    // music: the battle theme grows with the danger — the zone closing in, few left, shots nearby
+    if (state === 'match') {
+      const z = match.zone, alive = match.alive / Math.max(1, match.units.length);
+      shotHeat = Math.max(0, shotHeat - dt * 0.12);
+      const outside = Math.hypot(p.pos.x - z.cx, p.pos.z - z.cz) > z.r;
+      audio.setTension(Math.min(1, 0.1 + Math.max(0, z.phase) * 0.12 + (1 - alive) * 0.35 + shotHeat + (outside ? 0.25 : 0) + (z.state === 'shrink' ? 0.1 : 0)));
+      // footsteps on the island
+      if (p.alive && p.onGround && p.moveSpeed > 0.6) {
+        stepT -= dt;
+        if (stepT <= 0) { stepT = p.moveSpeed > 4.5 ? 0.3 : 0.48; audio.sfx('step', { run: p.moveSpeed > 4.5, surface: match.island.houseAt(p.pos) >= 0 ? 'floor' : 'grass' }); }
+      } else stepT = 0.05;
+    }
     // what's under the crosshair to pick up
     look.lookItem = p.alive ? match.nearestItem(p, 2.4, forward(look.yaw, look.pitch)) : null;
     // a low sill right ahead: Space climbs it
@@ -496,6 +512,7 @@ export function createArena({ call, agents: agentSource = [], onExit }) {
     },
     close() {
       endMatch();
+      audio.music(null);   // the office takes its own music back
       state = 'closed';
       root.className = 'arena hidden';
       cancelAnimationFrame(raf);
@@ -597,7 +614,7 @@ class Sound {
     this.master.connect(this.ctx.destination);
   }
   // browsers only start audio after a click or key press; until then stay silent
-  ready() { const c = this.ctx; if (!c) return false; if (c.state !== 'running') { if (navigator.userActivation?.hasBeenActive) c.resume(); return false; } return true; }
+  ready() { const c = this.ctx; if (!c) return false; this.master.gain.value = 0.55 * audio.volumes.sfx; if (c.state !== 'running') { if (navigator.userActivation?.hasBeenActive) c.resume(); return false; } return true; }
   shot(cat, dist) {
     const c = this.ctx; if (!this.ready()) return;
     const vol = Math.max(0, 1 - dist / 260) ** 1.6;
