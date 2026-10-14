@@ -148,7 +148,7 @@ export function createArena({ call, agents: agentSource = [], onExit }) {
       b.onclick = () => {
         const s = skins.find((x) => x.id === b.dataset.id);
         if (!owned.has(s.id) && s.price) {
-          if (b.classList.contains('confirm')) { call('arenaBuy', s.id); b.classList.remove('confirm'); return; }
+          if (b.classList.contains('confirm')) { call('arenaBuy', s.id); track('outfit_bought', { price: s.price }); b.classList.remove('confirm'); return; }
           root.querySelectorAll('.ar-skin.confirm').forEach((x) => x.classList.remove('confirm'));
           b.classList.add('confirm');
           b.querySelector('small').textContent = wallet.coins >= s.price ? t('Bấm lần nữa để mua ({n} coin)', { n: s.price }) : t('Thiếu {n} coin', { n: s.price - wallet.coins });
@@ -218,6 +218,9 @@ export function createArena({ call, agents: agentSource = [], onExit }) {
   }
 
   // ---------------------------------------------------------------- match
+  // anonymous usage (the app keeps only event names and properties it knows, see agentorch/telemetry.py)
+  const track = (event, props) => call('track', event, JSON.stringify(props));
+  let matchAt = 0;
   async function startMatch() {
     endMatch();
     root.className = 'arena loading';
@@ -255,6 +258,8 @@ export function createArena({ call, agents: agentSource = [], onExit }) {
     hud.message(t('Vào trận! Nhặt vũ khí, ở trong vùng an toàn và sống sót.'), 4);
     canvas.requestPointerLock?.();
     // the starter chosen in the lobby: the app takes it out of the inventory and says what it does
+    track('game_start', { map: sel.map, bots: sel.bots, agent_bot: !!agentBot, agent_level: agentBot ? sel.level : 'none', starter: sel.starter || 'none' });
+    matchAt = performance.now();
     if (sel.starter) { call('arenaStarter', sel.starter); sel.starter = ''; }
   }
   function applyStarter(msg) {
@@ -276,6 +281,7 @@ export function createArena({ call, agents: agentSource = [], onExit }) {
     hud?.el.remove(); hud = null;
   }
   function showEnd(r) {
+    track('game_end', { place: r.win ? 1 : r.rank, kills: match?.player.kills || 0, minutes: Math.round((performance.now() - matchAt) / 60000) });
     setTimeout(() => {
       if (!match) return;
       state = 'ended';
