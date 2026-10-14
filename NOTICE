@@ -1,0 +1,14 @@
+AgentOrch · Đảo sinh tồn (Survival Island)
+Copyright 2026 RunSnip
+
+The code of this product is licensed under the Apache License, Version 2.0 (see LICENSE).
+
+Third-party assets included, under their own licences:
+
+- skins/*.glb, skins/*.jpg — characters from the Microsoft Rocketbox Avatar Library
+  (https://github.com/microsoft/Microsoft-Rocketbox), MIT License, Copyright (c) Microsoft Corporation;
+  converted, retextured and with insignia removed for this game.
+- tex/*.jpg — ground textures from ambientCG (https://ambientcg.com), CC0 1.0 (public domain); see tex/SOURCES.md.
+
+Used at run time and provided by the AgentOrch app, not included here: three.js (MIT); trees, leaves,
+bark and rock textures (ambientCG, CC0).
