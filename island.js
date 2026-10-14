@@ -62,6 +62,20 @@ function makeNoise(seed) {
 
 // ---------------------------------------------------------------- island
 
+// where a ray (o + d·t) enters / leaves an axis-aligned box, or null
+function rayBoxT(o, d, b) {
+  let t0 = -Infinity, t1 = Infinity;
+  for (const ax of ['x', 'y', 'z']) {
+    if (Math.abs(d[ax]) < 1e-9) { if (o[ax] < b.min[ax] || o[ax] > b.max[ax]) return null; continue; }
+    let a = (b.min[ax] - o[ax]) / d[ax], c = (b.max[ax] - o[ax]) / d[ax];
+    if (a > c) [a, c] = [c, a];
+    t0 = Math.max(t0, a); t1 = Math.min(t1, c);
+  }
+  return t0 <= t1 && t1 >= 0 ? [Math.max(0, t0), t1] : null;
+}
+const rayBox = (o, d, b, max) => { const r = rayBoxT(o, d, b); return r && r[0] <= max ? r[0] : null; };
+const rayBoxExit = (o, d, b) => { const r = rayBoxT(o, d, b); return r ? r[1] : null; };
+
 export class Island {
   constructor(seed = 1, map = MAPS[0]) {
     this.seed = seed; this.map = map; this.radius = map.radius;
@@ -247,16 +261,29 @@ export class Island {
         seg(s, o.at - o.w / 2, 0, WH);
         seg(o.at - o.w / 2, o.at + o.w / 2, 0, o.y0);
         seg(o.at - o.w / 2, o.at + o.w / 2, o.y1, WH);
-        if (o.y0 > 0.1) {  // a window: thin frame and glass that doesn't block
+        if (o.y0 > 0.1) {  // a window: a frame, and glass unless it's a low open one to climb through
           const cx = ax + ux * o.at, cz = az + uz * o.at;
-          const g = new THREE.Mesh(box, glass);
-          g.scale.set(ux ? o.w : 0.03, o.y1 - o.y0, uz ? o.w : 0.03);
-          g.position.set(cx, y + (o.y0 + o.y1) / 2, cz);
-          this.group.add(g);
-          const f = new THREE.Mesh(box, frame);
-          f.scale.set(ux ? o.w + 0.08 : T + 0.04, 0.06, uz ? o.w + 0.08 : T + 0.04);
-          f.position.set(cx, y + o.y0, cz);
-          this.group.add(f);
+          if (!o.open) {
+            const g = new THREE.Mesh(box, glass);
+            g.scale.set(ux ? o.w : 0.03, o.y1 - o.y0, uz ? o.w : 0.03);
+            g.position.set(cx, y + (o.y0 + o.y1) / 2, cz);
+            this.group.add(g);
+            // glass stops bodies (no climbing through it) and what you reach for, not bullets
+            const hx = ux ? o.w / 2 : 0.04, hz = uz ? o.w / 2 : 0.04;
+            this.boxes.push({ min: new THREE.Vector3(cx - hx, y + o.y0, cz - hz), max: new THREE.Vector3(cx + hx, y + o.y1, cz + hz), glass: true });
+          }
+          for (const [fy, fh] of o.open ? [[o.y0, 0.07], [o.y1 - 0.07, 0.07]] : [[o.y0, 0.06]]) {
+            const f = new THREE.Mesh(box, frame);
+            f.scale.set(ux ? o.w + 0.08 : T + 0.04, fh, uz ? o.w + 0.08 : T + 0.04);
+            f.position.set(cx, y + fy + fh / 2, cz);
+            this.group.add(f);
+          }
+          if (o.open) for (const side of [-1, 1]) {   // jambs
+            const f = new THREE.Mesh(box, frame);
+            f.scale.set(ux ? 0.07 : T + 0.04, o.y1 - o.y0, uz ? 0.07 : T + 0.04);
+            f.position.set(cx + ux * side * (o.w / 2 + 0.035), y + (o.y0 + o.y1) / 2, cz + uz * side * (o.w / 2 + 0.035));
+            this.group.add(f);
+          }
         }
         s = o.at + o.w / 2;
       }
@@ -277,17 +304,29 @@ export class Island {
           add(concrete, x0 - 0.2, y - 0.6, z0 - 0.2, x1 + 0.2, y + 0.12, z1 + 0.2, false);   // plinth (walkable)
           add(floorMat, x0, y + 0.12, z0, x1, y + 0.14, z1, false);
           const doorSide = Math.floor(rnd() * 4);
-          const win = (len) => {
+          // windows; a few are low and open, to climb in or out through (Space at the sill)
+          const lowSide = (doorSide + 1 + Math.floor(rnd() * 3)) % 4;
+          const win = (len, side) => {
             const o = [];
-            for (let s = 1.8; s < len - 1.2; s += 2.6) o.push({ at: s, w: 1.3, y0: 1.0, y1: 2.2 });
+            for (let s = 1.8; s < len - 1.2; s += 2.6) {
+              const open = (side === lowSide && !o.some((w) => w.open)) || rnd() < 0.15;
+              o.push(open ? { at: s, w: 1.2, y0: 0.8, y1: 2.15, open: true } : { at: s, w: 1.3, y0: 1.0, y1: 2.2 });
+            }
             return o;
           };
           const door = (len) => [{ at: len / 2, w: 1.3, y0: 0, y1: 2.3 }];
           const sides = [[x0, z0, x1, z0, w], [x1, z0, x1, z1, d], [x1, z1, x0, z1, w], [x0, z1, x0, z0, d]];
           sides.forEach(([ax, az, bx, bz, len], i) => {
-            let ops = i === doorSide ? door(len) : win(len);
+            let ops = i === doorSide ? door(len) : win(len, i);
             if (i === doorSide && len > 8) ops = ops.concat([{ at: 1.6, w: 1.2, y0: 1.0, y1: 2.2 }]);
             wall(ax, az, bx, bz, y + 0.12, ops, mat);
+            // the low open windows: where they are and which way is out (for bots and for tests)
+            const len2 = Math.hypot(bx - ax, bz - az);
+            for (const o of ops) if (o.open) {
+              const wx = ax + (bx - ax) / len2 * o.at, wz = az + (bz - az) / len2 * o.at;
+              const n = new THREE.Vector3(wx - cx, 0, wz - cz); n.x = Math.abs(n.x) > Math.abs(n.z) ? Math.sign(n.x) : 0; n.z = n.x ? 0 : Math.sign(n.z);
+              (this.openWindows ||= []).push({ x: wx, z: wz, y: y + 0.12, out: n });
+            }
           });
           // flat roof with a low parapet
           add(concrete, x0 - 0.35, y + 0.12 + WH, z0 - 0.35, x1 + 0.35, y + 0.42 + WH, z1 + 0.35);
@@ -301,6 +340,48 @@ export class Island {
         }
       }
     }
+  }
+
+  // which house's rooms a point is in (inside the walls, between floor and roof), or -1 outdoors
+  houseAt(p) {
+    return (this.houses || []).findIndex((h) => p.x > h.x0 + 0.12 && p.x < h.x1 - 0.12 && p.z > h.z0 + 0.12 && p.z < h.z1 - 0.12
+      && p.y > h.y - 0.3 && p.y < h.y + 3.3);
+  }
+  // Can a hand at `from` reach something at `to`? Only on the same side of the walls (both in the
+  // same house, or both outdoors) and with nothing solid — wall, glass — in between: no taking
+  // things through a window.
+  canReach(from, to) {
+    if (this.houseAt(from) !== this.houseAt(to)) return false;
+    const d = to.clone().sub(from), len = d.length();
+    if (len < 1e-3) return true;
+    return this.raycast(from, d.divideScalar(len), len, true) >= len - 0.05;
+  }
+  // A low obstacle right ahead (a sill, a low wall) to climb over: {top, land} or null.
+  // `feet` is where the body stands, `dir` a horizontal unit vector.
+  vaultAt(feet, dir) {
+    const knee = feet.y + 0.4;
+    for (const b of this.boxes) {
+      if (b.glass || b.max.y < feet.y + 0.45 || b.max.y > feet.y + 1.5 || b.min.y > knee) continue;
+      // the ray along the ground ahead must hit this box within arm's length
+      const t = rayBox(new THREE.Vector3(feet.x, knee, feet.z), dir, b, 0.9);
+      if (t == null) continue;
+      // through the box and out the far side
+      const out = rayBoxExit(new THREE.Vector3(feet.x, knee, feet.z), dir, b);
+      if (out == null || out - t > 0.8) continue;   // a thick block, not a sill
+      const land = new THREE.Vector3(feet.x + dir.x * (out + 0.45), 0, feet.z + dir.z * (out + 0.45));
+      land.y = this.floorAt(land.x, b.max.y + 0.2, land.z);
+      if (land.y > b.max.y - 0.2 || b.max.y - land.y > 2.2) continue;
+      // room to pass over the sill: nothing in the way from just above it to head height
+      const over = new THREE.Vector3(feet.x, b.max.y + 0.1, feet.z), len = out + 0.45;
+      let clear = true;
+      for (const h of [0.1, 0.55, 0.95]) {
+        over.y = b.max.y + h;
+        if (this.raycast(over, dir, len, true) < len) { clear = false; break; }
+      }
+      if (!clear) continue;
+      return { top: b.max.y, land };
+    }
+    return null;
   }
 
   insideHouse(x, z) { return (this.houses || []).some((h) => x > h.x0 - 1 && x < h.x1 + 1 && z > h.z0 - 1 && z < h.z1 + 1); }
@@ -412,9 +493,10 @@ export class Island {
   }
 
   // Distance along a ray to the first solid thing (terrain, wall, trunk, rock), or Infinity.
-  raycast(o, d, max) {
+  raycast(o, d, max, glassToo = false) {
     let best = max;
     for (const b of this.boxes) {
+      if (b.glass && !glassToo) continue;   // bullets go through windows
       let t0 = 0, t1 = best;
       for (const ax of ['x', 'y', 'z']) {
         if (Math.abs(d[ax]) < 1e-9) { if (o[ax] < b.min[ax] || o[ax] > b.max[ax]) { t0 = Infinity; break; } continue; }

@@ -317,7 +317,7 @@ export function createArena({ call, agents: agentSource = [], onExit }) {
     else canvas.requestPointerLock?.();
   }
   function renderLoot() {
-    const p = match.player, near = match.items.filter((it) => it.pos.distanceTo(p.pos) < 2.8).sort((a, b) => a.pos.distanceTo(p.pos) - b.pos.distanceTo(p.pos));
+    const p = match.player, near = match.items.filter((it) => match.canReach(p, it)).sort((a, b) => a.pos.distanceTo(p.pos) - b.pos.distanceTo(p.pos));
     lootRows = [];
     const row = (label, act, cls = '') => { lootRows.push(act); return `<button class="ar-row ${cls}" data-row="${lootRows.length - 1}">${label}</button>`; };
     let html = '';
@@ -418,6 +418,8 @@ export function createArena({ call, agents: agentSource = [], onExit }) {
     island.update(dt, camera.position);
     // what's under the crosshair to pick up
     look.lookItem = p.alive ? match.nearestItem(p, 2.4, forward(look.yaw, look.pitch)) : null;
+    // a low sill right ahead: Space climbs it
+    look.vault = p.alive && !p.vault && !look.lookItem && p.onGround ? !!match.island.vaultAt(p.pos, forward(look.yaw, 0).setY(0).normalize()) : false;
     // arms and weapon
     vm.update(dt, {
       weapon: p.alive ? p.weapon?.id || null : null, ads: p.ads, sprint: p.sprint && p.moveSpeed > 4, moving: Math.min(1, p.moveSpeed / 6),
@@ -574,7 +576,7 @@ class Sound {
   play(kind) {
     const c = this.ctx; if (!this.ready()) return;
     const t = c.currentTime, o = c.createOscillator(), g = c.createGain();
-    const spec = { hit: [1800, 0.05, 0.12], kill: [900, 0.18, 0.2], hurt: [140, 0.2, 0.3], pickup: [660, 0.08, 0.12] }[kind] || [440, 0.05, 0.1];
+    const spec = { hit: [1800, 0.05, 0.12], kill: [900, 0.18, 0.2], hurt: [140, 0.2, 0.3], pickup: [660, 0.08, 0.12], vault: [220, 0.12, 0.18] }[kind] || [440, 0.05, 0.1];
     o.type = kind === 'hurt' ? 'sawtooth' : 'triangle';
     o.frequency.setValueAtTime(spec[0], t);
     if (kind === 'kill') o.frequency.exponentialRampToValueAtTime(1800, t + 0.15);

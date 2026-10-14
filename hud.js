@@ -117,8 +117,9 @@ export function createHud(root, island) {
       if (act) { $('.ar-action b').textContent = act.label; $('.ar-action-bar i').style.width = `${act.k * 100}%`; }
       // pick-up prompt
       const it = cam.lookItem;
-      $('.ar-prompt').classList.toggle('on', !!it);
+      $('.ar-prompt').classList.toggle('on', !!it || !!cam.vault);
       if (it) $('.ar-prompt').innerHTML = `<kbd>F</kbd> ${t('Nhặt {item}', { item: `<b>${esc(m.itemLabel(it))}</b>` })}`;
+      else if (cam.vault) $('.ar-prompt').innerHTML = `<kbd>Space</kbd> ${t('Trèo qua')}`;
       // zone
       const z = m.zone, outside = Math.hypot(p.pos.x - z.cx, p.pos.z - z.cz) > z.r;
       $('.ar-zone').innerHTML = (z.state === 'wait' ? t('Vùng an toàn thu hẹp sau {s}', { s: `<b>${Math.ceil(z.t)}s</b>` }) : `<b>${t('Vùng an toàn đang thu hẹp')}</b>`) + (outside ? ` · <em>${t('BẠN Ở NGOÀI VÙNG')}</em>` : '');

@@ -219,12 +219,16 @@ export class Match {
     if (it.kind === 'armor') return tr('Áo giáp ({value})', { value: it.value });
     return tr('Hòm đồ của {owner}', { owner: it.owner });
   }
+  // within a hand's reach: the same side of the walls, nothing solid (wall, glass) in between
+  canReach(u, it, reach = 2.8) {
+    return it.pos.distanceTo(u.pos) < reach && this.island.canReach(u.chest(), it.pos.clone().setY(it.pos.y + 0.25));
+  }
   // what a unit can pick up within reach (the player: the one under the crosshair if any)
   nearestItem(u, reach = 2.2, dir = null) {
     let best = null, bestScore = Infinity;
     for (const it of this.items) {
       const d = it.pos.distanceTo(u.pos);
-      if (d > reach) continue;
+      if (d > reach || !this.canReach(u, it)) continue;
       let score = d;
       if (dir) { const to = it.pos.clone().sub(u.eye()).normalize(); score -= to.dot(dir) * 2; }
       if (score < bestScore) { bestScore = score; best = it; }
@@ -241,6 +245,7 @@ export class Match {
     ];
   }
   takeFromBox(u, box, e) {
+    if (!this.items.includes(box) || !this.canReach(u, box)) return;
     if (e.kind === 'weapon') {
       const w = box.weapons.splice(e.i, 1)[0];
       if (!w) return;
@@ -274,7 +279,7 @@ export class Match {
     }
   }
   pickup(u, it) {
-    if (!it) return false;
+    if (!it || !this.items.includes(it) || !this.canReach(u, it)) return false;
     if (it.kind === 'weapon') {
       const old = u.give(it.id, it.mag != null ? 0 : 1);
       if (it.mag != null) u.slots[u.cur].mag = it.mag;
@@ -410,6 +415,32 @@ export class Match {
   physics(u, dt) {
     const I = this.island;
     const wish = u.wish || new THREE.Vector3();
+    // climbing over a sill: up, across, down, along a fixed arc; nothing else moves the body meanwhile
+    if (u.vault) {
+      const v = u.vault;
+      v.t = Math.min(1, v.t + dt / v.dur);
+      const k = v.t, e = k * k * (3 - 2 * k);
+      u.pos.x = v.from.x + (v.land.x - v.from.x) * e;
+      u.pos.z = v.from.z + (v.land.z - v.from.z) * e;
+      const lift = Math.sin(Math.min(1, k * 1.25) * Math.PI / 2);   // up early, then across and down
+      u.pos.y = k < 0.7 ? v.from.y + (v.top + 0.05 - v.from.y) * lift : v.top + 0.05 + (v.land.y - v.top - 0.05) * ((k - 0.7) / 0.3) ** 2;
+      u.vel.set(0, 0, 0);
+      u.moveSpeed = 0;
+      if (k >= 1) { u.vault = null; u.pos.copy(v.land); u.onGround = true; I.collide(u.pos, RADIUS, 1.75); }
+      return;
+    }
+    // Space at a low sill climbs it (in the direction of travel, else where the unit faces);
+    // a bot walking into one climbs it too
+    const going = wish.lengthSq() > 0.04 ? wish.clone().setY(0).normalize() : forward(u.yaw).setY(0).normalize();
+    if (u.onGround && !u.action && (u.jump || (!u.isPlayer && wish.lengthSq() > 0.25 && u.moveSpeed < 0.3))) {
+      const v = I.vaultAt(u.pos, going);
+      if (v) {
+        u.vault = { t: 0, dur: 0.55 + (v.top - u.pos.y) * 0.2, from: u.pos.clone(), top: v.top, land: v.land };
+        u.jump = false; u.crouch = false;
+        if (u.isPlayer) this.events.sound?.('vault');
+        return;
+      }
+    }
     const speed = u.crouch ? SPEED.crouch : u.ads ? SPEED.ads : u.sprint ? SPEED.sprint : SPEED.walk;
     const ground = I.floorAt(u.pos.x, u.pos.y + 0.5, u.pos.z);
     const wade = ground < 0 ? Math.max(0.45, 1 + ground * 0.4) : 1;
