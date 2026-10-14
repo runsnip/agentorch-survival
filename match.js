@@ -4,6 +4,7 @@
 // Shots are hitscan: a ray against bodies (head sphere + torso capsule) and
 // the island's solids, nearest hit wins.
 
+import { dress, randomLoadout } from './accessories.js';
 import * as THREE from 'three';
 import { WEAPONS, AMMO, buildGun } from './weapons.js';
 import { makeBody, ArmRig, BODY_H } from './actors.js';
@@ -155,6 +156,7 @@ export class Match {
     };
     const player = this.player = new Unit(this, { id: 0, name: opts.playerName || PLAYER_NAMES[Math.floor(Math.random() * PLAYER_NAMES.length)], isPlayer: true, asset: opts.playerAsset });
     player.pos.copy(spot(60)); player.yaw = Math.atan2(player.pos.x, player.pos.z);   // facing the island's centre
+    player.loadout = opts.playerGear || {};
     this.units.push(player);
     const names = BOT_NAMES.slice().sort(() => Math.random() - 0.5);
     for (let i = 0; i < opts.bots; i++) {
@@ -166,6 +168,7 @@ export class Match {
       do u.pos.copy(spot(45)); while (u.pos.distanceTo(player.pos) < 90 && spots.length < 400);
       u.yaw = Math.random() * 6.283;
       u.ai = new BotBrain(u);
+      u.loadout = randomLoadout();   // each bot wears its own gear
       this.units.push(u);
     }
     // everyone lands empty-handed: weapons are found on the island
@@ -547,7 +550,7 @@ export class Match {
     }
   }
   makeBody(u) {
-    const body = makeBody(u.asset);
+    const body = dress(makeBody(u.asset), u.loadout || {});
     u.body = body;
     body.group.traverse((o) => { if (o.isMesh) o.castShadow = true; });
     this.scene.add(body.group);

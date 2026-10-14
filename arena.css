@@ -208,3 +208,12 @@
 .arena .ar-starters > b { display: block; margin-left: 0; font-size: 12px; letter-spacing: .14em; color: #9fc3ff; }
 .arena .ar-starters .ar-starter b { font-size: 13px; margin-left: 0; letter-spacing: 0; color: #f2f5f9; } .ar-starters .ar-starter small { font-size: 11px; color: #aab3c2; letter-spacing: 0; }
 .ar-starter em { position: absolute; right: 10px; top: 8px; font-style: normal; font-weight: 800; color: #ffd77a; }
+
+/* gear over the outfit, in the lobby */
+.ar-gear-h { margin-top: 18px; }
+.ar-gear-row { margin: 0 0 10px; }
+.ar-gear-row small { display: block; margin-bottom: 4px; font-size: 11px; letter-spacing: .12em; text-transform: uppercase; color: #8fa3bd; }
+.ar-gear-row div { display: flex; flex-wrap: wrap; gap: 5px; }
+.ar-gear-row button { padding: 5px 9px; font: 600 12px -apple-system, sans-serif; color: #dfe6ef; cursor: pointer; background: rgba(255,255,255,.05);
+  border: 1px solid rgba(255,255,255,.14); clip-path: polygon(6px 0, 100% 0, 100% calc(100% - 6px), calc(100% - 6px) 100%, 0 100%, 0 6px); }
+.ar-gear-row button.on { color: #0b1220; background: linear-gradient(180deg, #7fc4ff, #3d8be0); border-color: #7fc4ff; }

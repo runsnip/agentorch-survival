@@ -16,6 +16,7 @@ import { Viewmodel } from './viewmodel.js';
 import { Match, forward, AGENT_LEVELS } from './match.js';
 import { WEAPONS, AMMO, buildGun } from './weapons.js';
 import { createHud } from './hud.js';
+import { dress, SLOTS, SLOT_NAMES } from './accessories.js';
 import { t, lang } from '/i18n.js';
 
 const LOCALE = lang === 'vi' ? 'vi-VN' : lang;
@@ -29,7 +30,7 @@ export function createArena({ call, agents: agentSource = [], onExit }) {
   let renderer, scene, camera, env, island, vm, hud, match, sound;
   let state = 'closed';             // closed → loading → lobby → match (→ paused / ended)
   let raf = 0, last = 0;
-  const sel = { starter: '', skin: store.get('skin', ''), bots: store.get('bots', 15), agentOn: store.get('agentOn', false), agent: store.get('agent', ''), level: store.get('level', 'talent'), map: store.get('map', MAPS[0].id) };
+  const sel = { gear: store.get('gear', {}), starter: '', skin: store.get('skin', ''), bots: store.get('bots', 15), agentOn: store.get('agentOn', false), agent: store.get('agent', ''), level: store.get('level', 'talent'), map: store.get('map', MAPS[0].id) };
 
   // ---------------------------------------------------------------- DOM
   const root = document.createElement('div');
@@ -40,7 +41,8 @@ export function createArena({ call, agents: agentSource = [], onExit }) {
     <div class="ar-lobby">
       <header><div><h1>${t('PHÒNG CHỜ')}</h1><p>${t('Chọn trang phục và số BOT, rồi vào trận.')}</p></div>
         <div class="ar-wallet"><b class="ar-coins">0</b><span>${t('coin')}</span><small class="ar-earn"></small></div></header>
-      <aside class="ar-skins"><h3>${t('TRANG PHỤC')}</h3><div class="ar-skin-grid"></div></aside>
+      <aside class="ar-skins"><h3>${t('TRANG PHỤC')}</h3><div class="ar-skin-grid"></div>
+        <h3 class="ar-gear-h">${t('PHỤ KIỆN')}</h3><div class="ar-gear"></div></aside>
       <section class="ar-stage"><div class="ar-skin-name"></div><div class="ar-maps"></div></section>
       <aside class="ar-setup">
         <h3>${t('TRẬN ĐẤU')}</h3>
@@ -160,10 +162,19 @@ export function createArena({ call, agents: agentSource = [], onExit }) {
     $('.ar-coins').textContent = wallet.coins.toLocaleString(LOCALE);
     $('.ar-earn').textContent = t('{tokens} token · {rate} token = 1 coin', { tokens: wallet.tokens.toLocaleString(LOCALE), rate: wallet.rate.toLocaleString(LOCALE) });
   }
+  // gear over the outfit, slot by slot (accessories.js); the preview wears it at once
+  function renderGear() {
+    $('.ar-gear').innerHTML = Object.entries(SLOTS).map(([slot, opts]) => `<div class="ar-gear-row"><small>${SLOT_NAMES[slot]}</small>
+      <div>${opts.map(([id, name]) => `<button class="${(sel.gear[slot] || '') === id ? 'on' : ''}" data-gear="${slot}" data-gv="${id}">${name}</button>`).join('')}</div></div>`).join('');
+    root.querySelectorAll('[data-gear]').forEach((b) => { b.onclick = () => {
+      sel.gear = { ...sel.gear, [b.dataset.gear]: b.dataset.gv }; store.set('gear', sel.gear);
+      renderGear(); if (preview?.body) dress(preview.body, sel.gear);
+    }; });
+  }
   async function showSkin(s) {
     $('.ar-skin-name').textContent = t(s.name);
     preview ||= new Preview($('.ar-stage'), env);
-    preview.show(await loadAvatar(BASE + 'skins/' + s.file));
+    preview.show(await loadAvatar(BASE + 'skins/' + s.file), sel.gear);
   }
   // starters from the company's inventory (they work in this game): pick one to bring into the next match
   function renderStarters() {
@@ -201,7 +212,7 @@ export function createArena({ call, agents: agentSource = [], onExit }) {
     root.className = 'arena lobby';
     document.exitPointerLock?.();
     call('arenaWallet');
-    renderSkins(); renderSetup(); renderMaps();
+    renderSkins(); renderSetup(); renderMaps(); renderGear();
     const s = skins.find((x) => x.id === sel.skin);
     if (s) showSkin(s);
   }
@@ -217,11 +228,11 @@ export function createArena({ call, agents: agentSource = [], onExit }) {
     const loaded = await Promise.allSettled(skins.map((s) => loadAvatar(BASE + 'skins/' + s.file)));
     const assets = loaded.filter((r) => r.status === 'fulfilled').map((r) => r.value);
     const playerAsset = loaded[skins.indexOf(skin)]?.value || assets[0];
-    vm.setBody(playerAsset);
+    vm.setBody(playerAsset, sel.gear);
     const agents = agentsNow();
     const agent = sel.agentOn && agents.length ? (agents.find((a) => a.slug === sel.agent) || agents[0]) : null;
     match = new Match({
-      island, scene, playerAsset, botAssets: assets, bots: sel.bots,
+      island, scene, playerAsset, playerGear: sel.gear, botAssets: assets, bots: sel.bots,
       agent: agent && { ...agent, level: sel.level, asset: assets[Math.abs([...agent.slug].reduce((h, c) => h * 31 + c.charCodeAt(0), 7)) % assets.length] },
       events: {
         feed: (text, by, t) => hud.feed(esc(text), by?.isPlayer ? 'mine' : t?.isPlayer ? 'me' : ''),
@@ -492,7 +503,7 @@ export function createArena({ call, agents: agentSource = [], onExit }) {
         if (msg.skin && skins.some((s) => s.id === msg.skin) && !store.get('skin', '')) sel.skin = msg.skin;
         // the finish equipped in the inventory, on every gun in the player's hands
         vm?.setFinish((msg.inventory || []).find((it) => it.id === msg.equipped?.finish && it.count > 0) || null);
-        if (state === 'lobby') { renderSkins(); renderStarters(); if (msg.error) $('.ar-earn').textContent = msg.error; }
+        if (state === 'lobby') { renderSkins(); renderStarters(); renderGear(); if (msg.error) $('.ar-earn').textContent = msg.error; }
       } else if (msg.type === 'arena_agent') agentOrder(msg);
       else if (msg.type === 'arena_starter') applyStarter(msg);
     },
@@ -532,9 +543,9 @@ class Preview {
     this.camera.position.set(0, 1.15, 6.2);
     this.camera.lookAt(0, 0.92, 0);
   }
-  show(asset) {
+  show(asset, gear = {}) {
     if (this.body) this.scene.remove(this.body.group);
-    const body = makeBody(asset);
+    const body = dress(makeBody(asset), gear);
     this.body = body;
     this.scene.add(body.group);
     this.mixer = new THREE.AnimationMixer(body.model);

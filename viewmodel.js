@@ -5,6 +5,7 @@
 // collapsed, the camera sits where the eyes were, and both arms are posed every
 // frame by IK onto the weapon's grip and support points.
 
+import { dress } from './accessories.js';
 import * as THREE from 'three';
 import { makeBody, ArmRig, findBone } from './actors.js';
 import { applyFinish, buildGun, muzzleFlash } from './weapons.js';
@@ -42,9 +43,9 @@ export class Viewmodel {
     this.rig.add(this.handMag);
   }
 
-  setBody(asset) {
+  setBody(asset, gear = {}) {
     if (this.body) this.rig.remove(this.body.group);
-    const body = makeBody(asset);
+    const body = dress(makeBody(asset), gear);   // gloves show on the hands
     this.body = body;
     // the camera sits at the eyes: find the head, then face the body along −z
     body.group.rotation.y = Math.PI;

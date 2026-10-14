@@ -35,6 +35,11 @@ if (q.has('play')) {
   const d = arena.debug();
   d.look.pitch = +(q.get('pitch') || 0);
   if (q.get('w')) d.match.player.give(q.get('w'), 2);
+  if (q.has('bot')) {   // stand a few metres from a bot, looking at it (to see its gear)
+    const p = d.match.player, b = d.match.units.find((u) => !u.isPlayer && u.loadout && (u.loadout.vest || u.loadout.back));
+    if (b) { const V = (await import('three')).Vector3; b.ai = null; b.wish = new V(); p.pos.copy(b.pos).add(new V(2.6, 0, 1.2)); p.pos.y = d.match.island.floorAt(p.pos.x, b.pos.y + 0.5, p.pos.z);
+      d.look.yaw = Math.atan2(-(b.pos.x - p.pos.x), -(b.pos.z - p.pos.z)); d.look.pitch = -0.08; window.botGear = JSON.stringify(b.loadout); }
+  }
   if (q.has('loot')) {   // walk to the nearest item, then open the loot panel
     const p = d.match.player, it = d.match.items.slice().sort((a, b) => a.pos.distanceTo(p.pos) - b.pos.distanceTo(p.pos))[0];
     p.pos.copy(it.pos).add(new (await import('three')).Vector3(1.2, 0, 0)); p.pos.y = d.match.island.floorAt(p.pos.x, it.pos.y + 0.5, p.pos.z);
