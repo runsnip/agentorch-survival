@@ -614,7 +614,7 @@ class Sound {
     this.master.connect(this.ctx.destination);
   }
   // browsers only start audio after a click or key press; until then stay silent
-  ready() { const c = this.ctx; if (!c) return false; this.master.gain.value = 0.55 * audio.volumes.sfx; if (c.state !== 'running') { if (navigator.userActivation?.hasBeenActive) c.resume(); return false; } return true; }
+  ready() { const c = this.ctx; if (!c) return false; this.master.gain.value = audio.muted ? 0 : 0.55 * audio.volumes.sfx * audio.volumes.master; if (c.state !== 'running') { if (navigator.userActivation?.hasBeenActive) c.resume(); return false; } return true; }
   shot(cat, dist) {
     const c = this.ctx; if (!this.ready()) return;
     const vol = Math.max(0, 1 - dist / 260) ** 1.6;
