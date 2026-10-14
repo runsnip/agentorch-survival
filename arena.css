@@ -196,3 +196,15 @@
 .arena .ar-slots span, .arena .ar-meds span { padding: 4px 8px; border-radius: 6px; background: rgba(0,0,0,.35); font-size: 11.5px; font-weight: 700; }
 .arena .ar-slots span.on { background: rgba(255,209,102,.3); outline: 1px solid #ffd166; }
 .arena .ar-slots span.empty { opacity: .45; }
+
+/* starters from the inventory, in the lobby */
+.ar-starters.off .ar-starter-list { opacity: .6; }
+.ar-starter-list { display: grid; gap: 6px; margin: 6px 0; }
+.ar-starter { --rc: #9aa6b8; position: relative; display: grid; text-align: left; gap: 2px; padding: 7px 34px 7px 10px; cursor: pointer; color: #e8edf4;
+  background: linear-gradient(90deg, color-mix(in srgb, var(--rc) 22%, transparent), rgba(255,255,255,.03)); border: 1px solid color-mix(in srgb, var(--rc) 55%, transparent);
+  clip-path: polygon(8px 0, 100% 0, 100% calc(100% - 8px), calc(100% - 8px) 100%, 0 100%, 0 8px); font: inherit; }
+.ar-starter.r-rare { --rc: #4fa3ff; } .ar-starter.r-epic { --rc: #b06cff; } .ar-starter.r-legendary { --rc: #f3c14b; }
+.ar-starter.on { border-color: #ffd77a; box-shadow: inset 0 0 0 1px #ffd77a; }
+.arena .ar-starters > b { display: block; margin-left: 0; font-size: 12px; letter-spacing: .14em; color: #9fc3ff; }
+.arena .ar-starters .ar-starter b { font-size: 13px; margin-left: 0; letter-spacing: 0; color: #f2f5f9; } .ar-starters .ar-starter small { font-size: 11px; color: #aab3c2; letter-spacing: 0; }
+.ar-starter em { position: absolute; right: 10px; top: 8px; font-style: normal; font-weight: 800; color: #ffd77a; }

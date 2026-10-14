@@ -108,6 +108,26 @@ function scopeOn(g, M, y, z0, len, zoom) {
 }
 
 // returns { group, support, sightY, muzzle, mag, def }
+// A finish from the inventory (Tab › Kho đồ): the gun's body and furniture in `color`, small parts in
+// `accent`; `glow` lights the accent up, `metal` makes the body metal. Applied to the player's guns only.
+const finishMats = new Map();
+export function applyFinish(gun, finish) {
+  if (!finish?.color) return gun;
+  if (!finishMats.has(finish.id)) {
+    const main = new THREE.MeshStandardMaterial({ color: finish.color, metalness: finish.metal ? 1 : 0.35, roughness: finish.metal ? 0.22 : 0.55 });
+    const accent = new THREE.MeshStandardMaterial({ color: finish.accent || finish.color, metalness: 0.5, roughness: 0.4,
+      emissive: finish.glow ? (finish.accent || finish.color) : 0x000000, emissiveIntensity: finish.glow ? 1.3 : 0 });
+    finishMats.set(finish.id, { main, accent });
+  }
+  const { main, accent } = finishMats.get(finish.id), M = materials();
+  gun.group.traverse((o) => {
+    if (!o.isMesh) return;
+    if (o.material === M.anodized || o.material === M.polymer || [...M.furniture.values()].includes(o.material)) o.material = main;
+    else if (o.material === M.dark) o.material = accent;
+  });
+  return gun;
+}
+
 export function buildGun(id) {
   const d = WEAPONS[id], M = materials(), F = furniture(d.color);
   const g = new THREE.Group();

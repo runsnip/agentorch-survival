@@ -29,7 +29,7 @@ export function createArena({ call, agents: agentSource = [], onExit }) {
   let renderer, scene, camera, env, island, vm, hud, match, sound;
   let state = 'closed';             // closed → loading → lobby → match (→ paused / ended)
   let raf = 0, last = 0;
-  const sel = { skin: store.get('skin', ''), bots: store.get('bots', 15), agentOn: store.get('agentOn', false), agent: store.get('agent', ''), level: store.get('level', 'talent'), map: store.get('map', MAPS[0].id) };
+  const sel = { starter: '', skin: store.get('skin', ''), bots: store.get('bots', 15), agentOn: store.get('agentOn', false), agent: store.get('agent', ''), level: store.get('level', 'talent'), map: store.get('map', MAPS[0].id) };
 
   // ---------------------------------------------------------------- DOM
   const root = document.createElement('div');
@@ -51,6 +51,8 @@ export function createArena({ call, agents: agentSource = [], onExit }) {
           <div class="ar-levels"></div>
           <small>${t('Agent vào trận như một đấu thủ độc lập: mọi nhân vật khác đều là đối thủ, không có đồng minh. Vài giây một lần agent nhận tình hình rút gọn và chỉ trả về một lệnh ngắn, nên tốn rất ít token (tính vào bảng token của agent đó).')}</small>
         </div>
+        <div class="ar-field ar-starters"><b>${t('MANG VÀO TRẬN')}</b><div class="ar-starter-list"></div>
+          <small>${t('Đồ trong Kho đồ của công ty, dùng một lần. Kiếm thêm bằng nhiệm vụ thành phố.')}</small></div>
         <div class="ar-keys"><b>${t('Phím')}</b>
           <span><kbd>W A S D</kbd> ${t('di chuyển')} · <kbd>Shift</kbd> ${t('chạy')} · <kbd>C</kbd> ${t('ngồi')} · <kbd>Space</kbd> ${t('nhảy')}</span>
           <span><kbd>${t('Chuột trái')}</kbd> ${t('bắn')} · <kbd>${t('Chuột phải')}</kbd> ${t('ngắm')} · <kbd>R</kbd> ${t('nạp đạn')} · <kbd>F</kbd> ${t('nhặt')}</span>
@@ -163,6 +165,16 @@ export function createArena({ call, agents: agentSource = [], onExit }) {
     preview ||= new Preview($('.ar-stage'), env);
     preview.show(await loadAvatar(BASE + 'skins/' + s.file));
   }
+  // starters from the company's inventory (they work in this game): pick one to bring into the next match
+  function renderStarters() {
+    const list = (wallet.inventory || []).filter((it) => it.kind === 'starter' && it.count > 0 && (it.games || []).some((g) => g === 'arena' || g === '*'));
+    if (sel.starter && !list.some((it) => it.id === sel.starter)) sel.starter = '';
+    $('.ar-starters').classList.toggle('off', !list.length);
+    $('.ar-starter-list').innerHTML = list.length ? list.map((it) => `<button class="ar-starter r-${it.rarity}${sel.starter === it.id ? ' on' : ''}" data-starter="${it.id}">
+      <b>${esc(t(it.name))}</b><small>${esc(t(it.desc))}</small><em>×${it.count}</em></button>`).join('')
+      : `<small>${t('Kho đồ chưa có món nào dùng được trong game này.')}</small>`;
+    root.querySelectorAll('[data-starter]').forEach((b) => { b.onclick = () => { sel.starter = sel.starter === b.dataset.starter ? '' : b.dataset.starter; renderStarters(); }; });
+  }
   function renderSetup() {
     const agents = agentsNow();
     $('.ar-bots').value = sel.bots; $('.ar-bots-val').textContent = sel.bots;
@@ -231,6 +243,18 @@ export function createArena({ call, agents: agentSource = [], onExit }) {
     root.className = 'arena playing';
     hud.message(t('Vào trận! Nhặt vũ khí, ở trong vùng an toàn và sống sót.'), 4);
     canvas.requestPointerLock?.();
+    // the starter chosen in the lobby: the app takes it out of the inventory and says what it does
+    if (sel.starter) { call('arenaStarter', sel.starter); sel.starter = ''; }
+  }
+  function applyStarter(msg) {
+    const p = match?.player, e = msg.effect;
+    if (!p?.alive || !e) return;
+    if (e.armor) p.armor = Math.max(p.armor, e.armor);
+    for (const [k, n] of Object.entries(e.meds || {})) p.meds[k] = (p.meds[k] || 0) + n;
+    if (e.weapon && WEAPONS[e.weapon]) p.give(e.weapon, 1);
+    const it = (wallet.inventory || []).find((x) => x.id === msg.id);
+    hud?.message(t('Mang theo: {item}', { item: it ? t(it.name) : msg.id }), 3);
+    call('arenaWallet');   // the inventory count went down
   }
   function endMatch() {
     if (lootOpen) toggleLoot(false);
@@ -466,8 +490,11 @@ export function createArena({ call, agents: agentSource = [], onExit }) {
       if (msg.type === 'arena_wallet') {
         wallet = msg;
         if (msg.skin && skins.some((s) => s.id === msg.skin) && !store.get('skin', '')) sel.skin = msg.skin;
-        if (state === 'lobby') { renderSkins(); if (msg.error) $('.ar-earn').textContent = msg.error; }
+        // the finish equipped in the inventory, on every gun in the player's hands
+        vm?.setFinish((msg.inventory || []).find((it) => it.id === msg.equipped?.finish && it.count > 0) || null);
+        if (state === 'lobby') { renderSkins(); renderStarters(); if (msg.error) $('.ar-earn').textContent = msg.error; }
       } else if (msg.type === 'arena_agent') agentOrder(msg);
+      else if (msg.type === 'arena_starter') applyStarter(msg);
     },
   };
   return arena;

@@ -9,16 +9,27 @@ const q = new URLSearchParams(location.search);
 let arena;
 if (q.get('map')) localStorage.setItem('arena.map', JSON.stringify(q.get('map')));
 localStorage.setItem('arena.agentOn', q.has('agent') ? 'true' : 'false');
+// a fake company inventory: a finish to wear, starters to bring
+const root0 = () => document;
+const INVENTORY = [
+  { id: 'finish-gold', kind: 'finish', rarity: 'legendary', color: '#d4a43a', accent: '#7a5a18', metal: true, name: 'Họa tiết Vàng ròng', desc: 'Súng mạ vàng bóng loáng.', games: ['arena'], count: 1 },
+  { id: 'finish-neon', kind: 'finish', rarity: 'epic', color: '#1b1d24', accent: '#00e5ff', glow: true, name: 'Họa tiết Neon', desc: 'Thân đen, viền xanh phát sáng.', games: ['arena'], count: 1 },
+  { id: 'armor-light', kind: 'starter', rarity: 'rare', name: 'Áo giáp nhẹ', desc: 'Vào trận với 50 giáp.', games: ['arena'], count: 2 },
+  { id: 'pistol-start', kind: 'starter', rarity: 'epic', name: 'Súng lục giắt lưng', desc: 'Vào trận với một khẩu Orvel 9 và một băng đạn.', games: ['arena'], count: 1 },
+];
 const call = (name, ...a) => {
   console.log('call', name, ...a);
   if (name === 'arenaAgentTick') { const v = JSON.parse(a[0]); window.lastView = v; window.asks = (window.asks || 0) + 1; window.chars = (window.chars || 0) + a[0].length; setTimeout(() => arena.onMessage({ type: 'arena_agent', order: { type: 'zone' } }), 300); }
-  if (name === 'arenaWallet') setTimeout(() => arena.onMessage({ type: 'arena_wallet', coins: 420, earned: 420, spent: 0, tokens: 420318, rate: 1000, owned: [], skin: '' }), 10);
+  if (name === 'arenaWallet') setTimeout(() => arena.onMessage({ type: 'arena_wallet', coins: 420, earned: 420, spent: 0, tokens: 420318, rate: 1000, owned: [], skin: '',
+    equipped: { finish: q.get('finish') || 'finish-gold' }, inventory: INVENTORY }), 10);
+  if (name === 'arenaStarter') setTimeout(() => arena.onMessage({ type: 'arena_starter', id: a[0], effect: { 'armor-light': { armor: 50 }, 'pistol-start': { weapon: 'orvel' }, 'medkit-1': { meds: { medkit: 1 } } }[a[0]] || {} }), 50);
 };
 arena = createArena({ call, agents: [{ slug: 'tro-ly', name: 'Trợ lý', title: 'Trợ lý CEO' }, { slug: 'dev-1', name: 'Minh', title: 'Lập trình viên' }], onExit: () => (document.title = 'exit') });
 window.arena = arena;
 await arena.open();
 const wait = (ms) => new Promise((r) => setTimeout(r, ms));
 await wait(800);
+if (q.get('starter')) root0().querySelector(`[data-starter="${q.get('starter')}"]`)?.click();   // pick a starter in the lobby
 if (q.has('play')) {
   await arena.debug().start();
   const d = arena.debug();

@@ -7,7 +7,7 @@
 
 import * as THREE from 'three';
 import { makeBody, ArmRig, findBone } from './actors.js';
-import { buildGun, muzzleFlash } from './weapons.js';
+import { applyFinish, buildGun, muzzleFlash } from './weapons.js';
 
 const V = (x, y, z) => new THREE.Vector3(x, y, z);
 // where each kind of weapon sits from the hip, in camera space (metres)
@@ -61,9 +61,19 @@ export class Viewmodel {
     }
   }
 
+  // the player's equipped finish (inventory): every gun in hand wears it
+  setFinish(finish) {
+    if ((finish?.id || '') === (this.finish?.id || '')) return;
+    this.finish = finish;
+    const held = this.current ? [...this.guns].find(([, g]) => g === this.current)?.[0] : null;
+    for (const g of this.guns.values()) g.group.removeFromParent();
+    this.guns.clear();
+    if (held) this.mount(held);   // the gun in hand, repainted
+  }
+
   gun(id) {
     if (!this.guns.has(id)) {
-      const g = buildGun(id);
+      const g = applyFinish(buildGun(id), this.finish);
       g.group.traverse((o) => { if (o.isMesh) o.castShadow = false; });
       this.guns.set(id, g);
     }
