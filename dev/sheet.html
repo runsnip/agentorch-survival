@@ -1,0 +1,12 @@
+<!doctype html><meta charset=utf-8><body style="margin:0;background:#111"><canvas id=c width=1000 height=1000></canvas><script>
+// Dev page: up to four textures in a 2×2 sheet with a 10% grid, for reading coordinates. ?f=a.png,b.png
+const files = new URLSearchParams(location.search).get('f').split(','), c = document.getElementById('c'), g = c.getContext('2d');
+let left = files.length;
+files.forEach((f, i) => { const im = new Image(); im.onload = () => {
+  const x0 = (i % 2) * 500, y0 = Math.floor(i / 2) * 500, S = 480;
+  g.drawImage(im, x0, y0, S, S);
+  g.strokeStyle = 'rgba(255,0,255,.7)'; g.fillStyle = '#ff0'; g.font = '11px monospace';
+  for (let k = 1; k < 10; k++) { g.beginPath(); g.moveTo(x0 + S * k / 10, y0); g.lineTo(x0 + S * k / 10, y0 + S); g.moveTo(x0, y0 + S * k / 10); g.lineTo(x0 + S, y0 + S * k / 10); g.stroke(); g.fillText(k, x0 + S * k / 10 + 2, y0 + 10); g.fillText(k, x0 + 2, y0 + S * k / 10 - 2); }
+  g.fillStyle = '#0ff'; g.fillText(f.split('__')[0] + ' ' + f.split('__')[1], x0 + 4, y0 + S + 14);
+  if (--left === 0) document.title = 'done'; }; im.src = 'tex/' + f; });
+</script>

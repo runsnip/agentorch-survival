@@ -1,0 +1,4 @@
+<!doctype html><meta charset=utf-8><body style="margin:0;background:#111;display:grid;grid-template-columns:repeat(3,1fr)">
+<script>// Dev page: a few local renders side by side. ?f=a.png,b.png
+for (const f of new URLSearchParams(location.search).get('f').split(',')) document.write(`<img src="shots/${f}" style="width:100%">`);
+document.title = 'done';</script>

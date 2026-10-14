@@ -1,0 +1,28 @@
+<!doctype html><meta charset=utf-8>
+<style>html,body{margin:0;overflow:hidden}</style>
+<script type="importmap">{ "imports": { "three": "/vendor/three.module.js", "three/addons/": "/vendor/addons/" } }</script>
+<body><script>addEventListener("error",e=>{document.title="ERR "+e.message});addEventListener("unhandledrejection",e=>{document.title="REJ "+(e.reason&&e.reason.stack||e.reason)})</script>
+<script type=module>
+// Dev page: a skin's lobby portrait, rendered from the game model itself (front, standing at ease). ?s=Military_Male_01
+import * as THREE from 'three';
+import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
+import { loadAvatar, makeBody } from '../actors.js';
+const q = new URLSearchParams(location.search);
+const r = new THREE.WebGLRenderer({ antialias: true }); r.setSize(innerWidth, innerHeight); document.body.append(r.domElement);
+r.toneMapping = THREE.ACESFilmicToneMapping;
+const s = new THREE.Scene();
+const bg = document.createElement('canvas'); bg.width = 4; bg.height = 256;
+const g = bg.getContext('2d'), gr = g.createLinearGradient(0, 0, 0, 256); gr.addColorStop(0, '#3a4b60'); gr.addColorStop(1, '#141c26'); g.fillStyle = gr; g.fillRect(0, 0, 4, 256);
+s.background = new THREE.CanvasTexture(bg); s.background.colorSpace = THREE.SRGBColorSpace;
+s.environment = new THREE.PMREMGenerator(r).fromScene(new RoomEnvironment(), 0.04).texture;
+const key = new THREE.DirectionalLight(0xffffff, 2.2); key.position.set(1.5, 3, 3);
+const rim = new THREE.DirectionalLight(0x9cc4ff, 1.8); rim.position.set(-2, 2, -3);
+s.add(key, rim, new THREE.HemisphereLight(0xffffff, 0x334455, 0.6));
+const a = await loadAvatar(`/addons/arena/skins/${q.get('s')}.glb?${Date.now()}`);
+const b = makeBody(a); s.add(b.group);
+b.group.rotation.y = -0.35;
+if (a.clips.idle) { const mx = new THREE.AnimationMixer(b.model); mx.clipAction(a.clips.idle).play(); mx.update(0.6); }
+const c = new THREE.PerspectiveCamera(24, innerWidth / innerHeight, 0.1, 30);
+c.position.set(0, 1.0, 5.2); c.lookAt(0, 0.92, 0);
+r.render(s, c); document.title = 'done';
+</script>

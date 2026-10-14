@@ -1,0 +1,99 @@
+{
+ "name": "arena",
+ "title": "Đảo sinh tồn",
+ "version": "0.1.0",
+ "entry": "arena.js",
+ "skins": [
+  {
+   "id": "military-male-01",
+   "name": "Rằn ri Sương",
+   "file": "Military_Male_01.glb",
+   "thumb": "Military_Male_01.jpg",
+   "price": 0
+  },
+  {
+   "id": "military-male-02",
+   "name": "Rằn ri Phố",
+   "file": "Military_Male_02.glb",
+   "thumb": "Military_Male_02.jpg",
+   "price": 0
+  },
+  {
+   "id": "military-female-01",
+   "name": "Rằn ri Mây",
+   "file": "Military_Female_01.glb",
+   "thumb": "Military_Female_01.jpg",
+   "price": 0
+  },
+  {
+   "id": "military-male-05",
+   "name": "Rằn ri Đá",
+   "file": "Military_Male_05.glb",
+   "thumb": "Military_Male_05.jpg",
+   "price": 150
+  },
+  {
+   "id": "military-male-06",
+   "name": "Rằn ri Tro",
+   "file": "Military_Male_06.glb",
+   "thumb": "Military_Male_06.jpg",
+   "price": 150
+  },
+  {
+   "id": "police-male-02",
+   "name": "Áo đen chiến thuật",
+   "file": "Police_Male_02.glb",
+   "thumb": "Police_Male_02.jpg",
+   "price": 100
+  },
+  {
+   "id": "security-female-01",
+   "name": "Áo khoác đen",
+   "file": "Security_Female_01.glb",
+   "thumb": "Security_Female_01.jpg",
+   "price": 100
+  },
+  {
+   "id": "police-male-01",
+   "name": "Áo xanh dã ngoại",
+   "file": "Police_Male_01.glb",
+   "thumb": "Police_Male_01.jpg",
+   "price": 200
+  },
+  {
+   "id": "police-female-01",
+   "name": "Bóng đêm",
+   "file": "Police_Female_01.glb",
+   "thumb": "Police_Female_01.jpg",
+   "price": 200
+  },
+  {
+   "id": "security-male-01",
+   "name": "Áo xám",
+   "file": "Security_Male_01.glb",
+   "thumb": "Security_Male_01.jpg",
+   "price": 250
+  },
+  {
+   "id": "military-male-03",
+   "name": "Rằn ri Giáp",
+   "file": "Military_Male_03.glb",
+   "thumb": "Military_Male_03.jpg",
+   "price": 300
+  },
+  {
+   "id": "military-female-02",
+   "name": "Rằn ri Lá",
+   "file": "Military_Female_02.glb",
+   "thumb": "Military_Female_02.jpg",
+   "price": 300
+  },
+  {
+   "id": "military-male-04",
+   "name": "Mắt đêm",
+   "file": "Military_Male_04.glb",
+   "thumb": "Military_Male_04.jpg",
+   "price": 450
+  }
+ ]
+}

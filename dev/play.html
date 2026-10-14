@@ -1,0 +1,42 @@
+<!doctype html><meta charset=utf-8>
+<style>html,body{margin:0;background:#000;overflow:hidden}</style>
+<script type="importmap">{ "imports": { "three": "/vendor/three.module.js", "three/addons/": "/vendor/addons/" } }</script>
+<body><script>addEventListener("error",e=>{document.title="ERR "+e.message});addEventListener("unhandledrejection",e=>{document.title="REJ "+(e.reason&&e.reason.stack||e.reason)})</script>
+<script type=module>
+// Dev page: the arena on its own, with a fake bridge. ?play=1 starts a match; ?t=<seconds> of simulated play before the shot.
+import { createArena } from '../arena.js';
+const q = new URLSearchParams(location.search);
+let arena;
+if (q.get('map')) localStorage.setItem('arena.map', JSON.stringify(q.get('map')));
+localStorage.setItem('arena.agentOn', q.has('agent') ? 'true' : 'false');
+const call = (name, ...a) => {
+  console.log('call', name, ...a);
+  if (name === 'arenaAgentTick') { const v = JSON.parse(a[0]); window.lastView = v; window.asks = (window.asks || 0) + 1; window.chars = (window.chars || 0) + a[0].length; setTimeout(() => arena.onMessage({ type: 'arena_agent', order: { type: 'zone' } }), 300); }
+  if (name === 'arenaWallet') setTimeout(() => arena.onMessage({ type: 'arena_wallet', coins: 420, earned: 420, spent: 0, tokens: 420318, rate: 1000, owned: [], skin: '' }), 10);
+};
+arena = createArena({ call, agents: [{ slug: 'tro-ly', name: 'Trợ lý', title: 'Trợ lý CEO' }, { slug: 'dev-1', name: 'Minh', title: 'Lập trình viên' }], onExit: () => (document.title = 'exit') });
+window.arena = arena;
+await arena.open();
+const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+await wait(800);
+if (q.has('play')) {
+  await arena.debug().start();
+  const d = arena.debug();
+  d.look.pitch = +(q.get('pitch') || 0);
+  if (q.get('w')) d.match.player.give(q.get('w'), 2);
+  if (q.has('loot')) {   // walk to the nearest item, then open the loot panel
+    const p = d.match.player, it = d.match.items.slice().sort((a, b) => a.pos.distanceTo(p.pos) - b.pos.distanceTo(p.pos))[0];
+    p.pos.copy(it.pos).add(new (await import('three')).Vector3(1.2, 0, 0)); p.pos.y = d.match.island.floorAt(p.pos.x, it.pos.y + 0.5, p.pos.z);
+    d.look.yaw = Math.PI / 2; d.look.pitch = -0.5;
+    await wait(500);
+    dispatchEvent(new KeyboardEvent('keydown', { code: 'Tab', key: 'Tab' }));
+  }
+  let frames = 0; const t0 = performance.now(); const tick = () => { frames++; if (performance.now() - t0 < 1e9) requestAnimationFrame(tick); }; requestAnimationFrame(tick);
+  await wait((+(q.get('t') || 3)) * 1000);
+  const p = d.match.player;
+  const info = document.createElement('pre'); info.id = 'info'; info.style.display = 'none';
+  info.textContent = `armed ${d.match.units.filter((u) => u.alive && u.slots.some(Boolean)).length}/${d.match.alive} kills ${d.match.units.reduce((n, u) => n + u.kills, 0)} asks ${window.asks} avgChars ${Math.round(window.chars / window.asks)} view ${JSON.stringify(window.lastView)} feed ${[...document.querySelectorAll('.ar-feedline')].map((x) => x.textContent).join(' | ')} fps ${(frames / ((performance.now() - t0) / 1000)).toFixed(1)} calls ${0} pos ${p.pos.toArray().map((v) => v.toFixed(1))} alive ${d.match.alive} items ${d.match.items.length}`;
+  document.body.append(info);
+}
+document.title = 'done';
+</script>

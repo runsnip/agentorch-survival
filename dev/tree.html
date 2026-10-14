@@ -1,0 +1,22 @@
+<!doctype html><meta charset=utf-8>
+<style>html,body{margin:0;background:#000;overflow:hidden}</style>
+<script type="importmap">{ "imports": { "three": "/vendor/three.module.js", "three/addons/": "/vendor/addons/" } }</script>
+<body><script>addEventListener("error",e=>{document.title="ERR "+e.message});addEventListener("unhandledrejection",e=>{document.title="REJ "+(e.reason&&e.reason.stack||e.reason)})</script>
+<script type=module>
+// Dev page: one plant kind on a lawn, seen from the side. ?k=oak_a
+import * as THREE from 'three';
+import { buildFlora } from '../flora.js';
+const q = new URLSearchParams(location.search), k = q.get('k') || 'oak_a';
+const r = new THREE.WebGLRenderer({ antialias: true }); r.setSize(innerWidth, innerHeight); document.body.append(r.domElement);
+r.toneMapping = THREE.ACESFilmicToneMapping; r.toneMappingExposure = 0.95; r.shadowMap.enabled = true;
+const s = new THREE.Scene(); s.background = new THREE.Color(0xa9c6dd);
+const f = await buildFlora(), d = f.kinds[k];
+const sun = new THREE.DirectionalLight(0xfff0d6, 2.3); sun.position.set(20, 30, 15); sun.castShadow = true; sun.shadow.mapSize.set(2048, 2048);
+Object.assign(sun.shadow.camera, { left: -15, right: 15, top: 15, bottom: -15 });
+s.add(new THREE.HemisphereLight(0xbcd4ec, 0x4a4a32, 0.85), sun);
+const g = new THREE.Mesh(new THREE.PlaneGeometry(60, 60), new THREE.MeshStandardMaterial({ color: 0x5f7a3c })); g.rotation.x = -Math.PI / 2; g.receiveShadow = true; s.add(g);
+for (const [geo, mat] of [[d.trunk, d.trunkMat], [d.leaves, d.leafMat]]) if (geo) { const m = new THREE.Mesh(geo, mat); m.castShadow = true; m.receiveShadow = true; s.add(m); }
+const c = new THREE.PerspectiveCamera(45, innerWidth / innerHeight, 0.1, 200);
+c.position.set(0, d.height * 0.45, d.height * 1.45); c.lookAt(0, d.height * 0.5, 0);
+setTimeout(() => { r.render(s, c); document.title = 'done'; }, 1500);
+</script>

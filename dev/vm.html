@@ -1,0 +1,50 @@
+<!doctype html><meta charset=utf-8>
+<style>html,body{margin:0;background:#7f9fb8;overflow:hidden}</style>
+<script type="importmap">{ "imports": { "three": "/vendor/three.module.js", "three/addons/": "/vendor/addons/" } }</script>
+<body><script>addEventListener("error",e=>{document.title="ERR "+e.message});addEventListener("unhandledrejection",e=>{document.title="REJ "+(e.reason&&e.reason.stack||e.reason)})</script><script type=module>
+// Dev page: renders the first-person arms on a plain background. ?skin=<model file>&w=<weapon>&ads=1&reload=0.5
+import * as THREE from 'three';
+import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
+import { loadAvatar } from '../actors.js';
+import { Viewmodel } from '../viewmodel.js';
+const q = new URLSearchParams(location.search);
+const r = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true });
+r.setSize(innerWidth, innerHeight); r.setClearColor(0x7f9fb8); document.body.append(r.domElement);
+const env = new THREE.PMREMGenerator(r).fromScene(new RoomEnvironment(), 0.04).texture;
+document.title='s1';
+const vm = new Viewmodel(env);
+document.title='s2';
+let av; try { av = await loadAvatar(q.get('skin') || 'Business_Male_01.glb'); } catch (e) { document.title = 'LOADERR ' + (e.stack || e); throw e; }
+document.title='s3';
+vm.setBody(av);
+document.title='s4';
+const s = { weapon: q.get('w') === 'none' ? null : (q.get('w') || 'vantor'), ads: q.get('ads') === '1', sprint: q.get('sprint') === '1', moving: 0,
+  reload: q.has('reload') ? +q.get('reload') : -1, reloadEmpty: q.has('empty'), shotAt: 0, lookDX: 0, lookDY: 0, sunView: new THREE.Vector3(0.4, 0.8, 0.3) };
+const steps = q.has('t') ? Math.round(+q.get('t') * 60) : 120;
+for (let i = 0; i < steps; i++) vm.update(1 / 60, s);
+if (q.get('test') === 'hand') {
+  vm.gunHolder.visible = false;
+  const V3 = (x, y, z) => new THREE.Vector3(x, y, z);
+  const F = V3(...(q.get('F') || '0,0,-1').split(',').map(Number)), Pp = V3(...(q.get('P') || '0,-1,0').split(',').map(Number));
+  vm.arms.R.reset(); vm.arms.L.reset();
+  vm.arms.R.solve(V3(0.13, -0.12, -0.45), F, Pp, V3(0.8, -1, 0.3), +(q.get('curl') || 0), V3(0.17, -0.26, -0.1));
+  vm.arms.L.solve(V3(-0.13, -0.12, -0.45), F, Pp, V3(-0.8, -1, 0.3), +(q.get('curl') || 0), V3(-0.17, -0.26, -0.1));
+}
+if (q.get('cam')) {
+  const [x, y, z, lx, ly, lz] = q.get('cam').split(',').map(Number);
+  vm.render = (rr, aspect) => { const c = new THREE.PerspectiveCamera(30, aspect, 0.01, 10); c.position.set(x, y, z); c.lookAt(lx, ly, lz); rr.render(vm.scene, c); };
+}
+r.clear(); vm.render(r, innerWidth / innerHeight);
+const P = (o) => vm.rig.worldToLocal(o.getWorldPosition(new THREE.Vector3())).toArray().map((v) => v.toFixed(2)).join(',');
+const info = ['R ok=' + vm.arms.R.ok + ' upper=' + vm.arms.R.upper?.name + ' fore=' + vm.arms.R.fore?.name + ' hand=' + vm.arms.R.hand?.name + ' fingers=' + vm.arms.R.fingers?.length + ' thumb=' + vm.arms.R.thumb?.[0]?.name,
+  'L ok=' + vm.arms.L.ok + ' ' + vm.arms.L.upper?.name, 'handR ' + (vm.arms.R.hand && P(vm.arms.R.hand)), 'handL ' + (vm.arms.L.hand && P(vm.arms.L.hand)),
+  'gun ' + vm.gunHolder.position.toArray().map((v) => v.toFixed(2)), 'bodypos ' + vm.body.group.position.toArray().map((v) => v.toFixed(2))];
+const fr = (arm) => { const e = arm.restBasis.elements; const C = vm.rig.worldToLocal(arm.hand.getWorldPosition(new THREE.Vector3()));
+  const F = arm.fingers.map((c) => vm.rig.worldToLocal(c[0].getWorldPosition(new THREE.Vector3())).sub(C)).reduce((s, v) => s.add(v), new THREE.Vector3()).normalize();
+  const T = vm.rig.worldToLocal(arm.thumb[0].getWorldPosition(new THREE.Vector3())).sub(C).normalize();
+  const f = (v) => v.toArray().map((x) => x.toFixed(2)).join(',');
+  return 'rest F=' + [e[0], e[1], e[2]].map((x) => x.toFixed(2)) + ' T=' + [e[4], e[5], e[6]].map((x) => x.toFixed(2)) + ' P=' + [e[8], e[9], e[10]].map((x) => x.toFixed(2)) + ' | now F=' + f(F) + ' T=' + f(T); };
+info.push('R ' + fr(vm.arms.R), 'L ' + fr(vm.arms.L));
+const pre = document.createElement('pre'); pre.id = 'info'; pre.style.cssText = 'position:fixed;left:4px;top:4px;margin:0;font:11px monospace;color:#fff'; pre.textContent = info.join('\n'); if (!q.has('clean')) document.body.append(pre);
+document.title = 'done';
+</script>

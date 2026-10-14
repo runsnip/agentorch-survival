@@ -1,0 +1,41 @@
+<!doctype html><meta charset=utf-8>
+<style>html,body{margin:0;background:#000;overflow:hidden}</style>
+<script type="importmap">{ "imports": { "three": "/vendor/three.module.js", "three/addons/": "/vendor/addons/" } }</script>
+<body><script>addEventListener("error",e=>{document.title="ERR "+e.message});addEventListener("unhandledrejection",e=>{document.title="REJ "+(e.reason&&e.reason.stack||e.reason)})</script>
+<script type=module>
+// Dev page: accuracy. A still target at 30 m and 80 m, the player aims at its chest and fires 50 shots
+// per weapon, from the hip and down the sights. Prints hit rates.
+import * as THREE from 'three';
+import { Island, MAPS } from '../island.js';
+import { Match } from '../match.js';
+import { WEAPONS } from '../weapons.js';
+const island = new Island(7, MAPS[1]);
+await island.build(null);
+const scene = new THREE.Scene();
+const m = new Match({ island, scene, playerAsset: null, botAssets: [null], bots: 1 });
+const p = m.player, t = m.units[1];
+t.ai = null; t.hp = 1e9;
+const out = [];
+for (const id of ['orvel', 'kestrix', 'vantor', 'draxis', 'selvar', 'tharn']) {
+  for (const dist of [30, 80]) for (const ads of [false, true]) {
+    p.slots = [null, null, null]; p.cur = -1; p.give(id, 20);
+    p.pos.set(0, island.heightAt(0, 0), 0); t.pos.set(0, island.heightAt(0, -dist), -dist);
+    // nothing in between for this test
+    const raycast = island.raycast; island.raycast = () => Infinity;
+    const to = t.chest().sub(p.eye());
+    p.yaw = Math.atan2(-to.x, -to.z); p.pitch = Math.asin(to.y / to.length());
+    p.ads = ads; p.moveSpeed = 0; p.bloom = 0;
+    let hits = 0;
+    for (let i = 0; i < 50; i++) {
+      p.fireCd = 0; p.reloadT = 0; p.weapon.mag = 30; p.bloom = 0;   // single aimed shots
+      const before = t.hp;
+      m.fire(p);
+      if (t.hp < before) hits++;
+    }
+    island.raycast = raycast;
+    out.push(`${WEAPONS[id].name.padEnd(9)} ${String(dist).padStart(3)}m ${ads ? 'ADS' : 'hip'}  ${hits * 2}%`);
+  }
+}
+const pre = document.createElement('pre'); pre.id = 'info'; pre.textContent = out.join('\n'); document.body.append(pre);
+document.title = 'done';
+</script>
