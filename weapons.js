@@ -5,6 +5,7 @@
 // `sightY` the height of the sight line above the grip, `muzzle` the barrel tip.
 
 import * as THREE from 'three';
+import { t } from '/i18n.js';
 
 export const AMMO = { '9mm': '9mm', '556': '5.56', '762': '7.62', '12g': '12 gauge' };
 
@@ -20,7 +21,7 @@ export const WEAPONS = {
   tharn:   { name: 'Tharn 3',  cat: 'sr',     ammo: '762', dmg: 92, rate: 1.35, mag: 5,  reload: 3.4, spread: 0.03,  ads: 0.01, bloom: 0,     range: 600, tier: 5, color: 0x4a3a28, auto: false, scope: 6 },
   bruhn:   { name: 'Bruhn 12', cat: 'sg',     ammo: '12g', dmg: 13, pellets: 9, rate: 0.85, mag: 6, reload: 3.0, spread: 0.05, ads: 0.75, bloom: 0, range: 35, tier: 2, color: 0x5a3d22, auto: false },
 };
-export const CAT_LABEL = { pistol: 'Súng lục', smg: 'Tiểu liên', ar: 'Súng trường', dmr: 'Súng bắn tỉa bán tự động', sr: 'Súng bắn tỉa', sg: 'Súng hoa cải' };
+export const CAT_LABEL = { pistol: t('Súng lục'), smg: t('Tiểu liên'), ar: t('Súng trường'), dmr: t('Súng bắn tỉa bán tự động'), sr: t('Súng bắn tỉa'), sg: t('Súng hoa cải') };
 
 // ---------------------------------------------------------------- materials
 

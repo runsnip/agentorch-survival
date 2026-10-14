@@ -3,6 +3,7 @@
 
 import { WEAPONS, AMMO } from './weapons.js';
 import { SIZE } from './island.js';
+import { t } from '/i18n.js';
 
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
@@ -53,7 +54,7 @@ export function createHud(root, island) {
     let html = '';
     for (let a = -360; a <= 720; a += 15) {
       const n = ((a % 360) + 360) % 360;
-      const label = { 0: 'B', 90: 'Đ', 180: 'N', 270: 'T' }[n];
+      const label = { 0: t('B'), 90: t('Đ'), 180: t('N'), 270: t('T') }[n];
       html += `<span style="left:${(a + 360) * 2}px" class="${label ? 'big' : ''}">${label || (n % 45 ? '' : n)}</span>`;
     }
     strip.innerHTML = html;
@@ -100,27 +101,27 @@ export function createHud(root, island) {
       $('.ar-hp span').textContent = Math.ceil(Math.max(0, p.hp));
       $('.ar-armor i').style.width = `${p.armor}%`;
       $('.ar-armor').classList.toggle('none', !p.armor);
-      $('.ar-alive').innerHTML = `<b>${m.alive}</b> CÒN SỐNG`;
-      $('.ar-kills').innerHTML = `<b>${p.kills}</b> HẠ GỤC`;
+      $('.ar-alive').innerHTML = t('{n} CÒN SỐNG', { n: `<b>${m.alive}</b>` });
+      $('.ar-kills').innerHTML = t('{n} HẠ GỤC', { n: `<b>${p.kills}</b>` });
       const w = p.weapon, d = p.def;
       $('.ar-ammo b').textContent = w ? w.mag : '–';
       $('.ar-ammo small').textContent = w ? p.ammo[d.ammo] : '';
       $('.ar-ammo').classList.toggle('low', !!w && w.mag <= Math.ceil(d.mag * 0.2));
-      $('.ar-wname').textContent = d ? `${d.name} · ${AMMO[d.ammo]}${d.auto ? ' · AUTO' : ''}` : 'Tay không';
+      $('.ar-wname').textContent = d ? `${d.name} · ${AMMO[d.ammo]}${d.auto ? ' · AUTO' : ''}` : t('Tay không');
       $('.ar-slots').innerHTML = [0, 1, 2].map((i) => `<span class="${p.cur === i ? 'on' : ''}${p.slots[i] ? '' : ' empty'}"><kbd>${i + 1}</kbd>${p.slots[i] ? esc(WEAPONS[p.slots[i].id].name) : '—'}</span>`).join('');
-      $('.ar-meds').innerHTML = `<span><kbd>4</kbd>Băng gạc ×${p.meds.bandage}</span><span><kbd>5</kbd>Cứu thương ×${p.meds.medkit}</span>`;
+      $('.ar-meds').innerHTML = `<span><kbd>4</kbd>${t('Băng gạc ×{n}', { n: p.meds.bandage })}</span><span><kbd>5</kbd>${t('Cứu thương ×{n}', { n: p.meds.medkit })}</span>`;
       // action bar: reload / healing
-      const act = p.action ? { label: p.action.kind === 'medkit' ? 'Đang dùng bộ cứu thương' : 'Đang băng bó', k: 1 - p.action.t / p.action.total }
-        : p.reloadT > 0 ? { label: 'Nạp đạn', k: 1 - p.reloadT / p.reloadTotal } : null;
+      const act = p.action ? { label: p.action.kind === 'medkit' ? t('Đang dùng bộ cứu thương') : t('Đang băng bó'), k: 1 - p.action.t / p.action.total }
+        : p.reloadT > 0 ? { label: t('Nạp đạn'), k: 1 - p.reloadT / p.reloadTotal } : null;
       $('.ar-action').classList.toggle('on', !!act);
       if (act) { $('.ar-action b').textContent = act.label; $('.ar-action-bar i').style.width = `${act.k * 100}%`; }
       // pick-up prompt
       const it = cam.lookItem;
       $('.ar-prompt').classList.toggle('on', !!it);
-      if (it) $('.ar-prompt').innerHTML = `<kbd>F</kbd> Nhặt <b>${esc(m.itemLabel(it))}</b>`;
+      if (it) $('.ar-prompt').innerHTML = `<kbd>F</kbd> ${t('Nhặt {item}', { item: `<b>${esc(m.itemLabel(it))}</b>` })}`;
       // zone
       const z = m.zone, outside = Math.hypot(p.pos.x - z.cx, p.pos.z - z.cz) > z.r;
-      $('.ar-zone').innerHTML = (z.state === 'wait' ? `Vùng an toàn thu hẹp sau <b>${Math.ceil(z.t)}s</b>` : '<b>Vùng an toàn đang thu hẹp</b>') + (outside ? ' · <em>BẠN Ở NGOÀI VÙNG</em>' : '');
+      $('.ar-zone').innerHTML = (z.state === 'wait' ? t('Vùng an toàn thu hẹp sau {s}', { s: `<b>${Math.ceil(z.t)}s</b>` }) : `<b>${t('Vùng an toàn đang thu hẹp')}</b>`) + (outside ? ` · <em>${t('BẠN Ở NGOÀI VÙNG')}</em>` : '');
       $('.ar-zone').classList.toggle('danger', outside);
       this.drawMap(m, cam);
     },

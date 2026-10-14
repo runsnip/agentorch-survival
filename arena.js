@@ -16,7 +16,9 @@ import { Viewmodel } from './viewmodel.js';
 import { Match, forward, AGENT_LEVELS } from './match.js';
 import { WEAPONS, AMMO, buildGun } from './weapons.js';
 import { createHud } from './hud.js';
+import { t, lang } from '/i18n.js';
 
+const LOCALE = lang === 'vi' ? 'vi-VN' : lang;
 const BASE = new URL('./', import.meta.url).href;
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const store = { get(k, d) { try { return JSON.parse(localStorage.getItem('arena.' + k)) ?? d; } catch { return d; } }, set(k, v) { try { localStorage.setItem('arena.' + k, JSON.stringify(v)); } catch { /* private mode */ } } };
@@ -34,36 +36,36 @@ export function createArena({ call, agents: agentSource = [], onExit }) {
   root.className = 'arena hidden';
   root.innerHTML = `
     <canvas class="ar-canvas"></canvas>
-    <div class="ar-loading"><div class="ar-spinner"></div><b>Đang dựng hòn đảo…</b><small></small></div>
+    <div class="ar-loading"><div class="ar-spinner"></div><b>${t('Đang dựng hòn đảo…')}</b><small></small></div>
     <div class="ar-lobby">
-      <header><div><h1>PHÒNG CHỜ</h1><p>Chọn trang phục và số BOT, rồi vào trận.</p></div>
-        <div class="ar-wallet"><b class="ar-coins">0</b><span>coin</span><small class="ar-earn"></small></div></header>
-      <aside class="ar-skins"><h3>TRANG PHỤC</h3><div class="ar-skin-grid"></div></aside>
+      <header><div><h1>${t('PHÒNG CHỜ')}</h1><p>${t('Chọn trang phục và số BOT, rồi vào trận.')}</p></div>
+        <div class="ar-wallet"><b class="ar-coins">0</b><span>${t('coin')}</span><small class="ar-earn"></small></div></header>
+      <aside class="ar-skins"><h3>${t('TRANG PHỤC')}</h3><div class="ar-skin-grid"></div></aside>
       <section class="ar-stage"><div class="ar-skin-name"></div><div class="ar-maps"></div></section>
       <aside class="ar-setup">
-        <h3>TRẬN ĐẤU</h3>
-        <label class="ar-field">Số BOT <b class="ar-bots-val"></b><input type="range" class="ar-bots" min="1" max="49"></label>
+        <h3>${t('TRẬN ĐẤU')}</h3>
+        <label class="ar-field">${t('Số BOT')} <b class="ar-bots-val"></b><input type="range" class="ar-bots" min="1" max="49"></label>
         <div class="ar-field ar-agent">
-          <label class="ar-switch"><input type="checkbox" class="ar-agent-on"><span></span>BOT do Agent điều khiển</label>
+          <label class="ar-switch"><input type="checkbox" class="ar-agent-on"><span></span>${t('BOT do Agent điều khiển')}</label>
           <select class="ar-agent-pick"></select>
           <div class="ar-levels"></div>
-          <small>Agent vào trận như một đấu thủ độc lập: mọi nhân vật khác đều là đối thủ, không có đồng minh. Vài giây một lần agent nhận tình hình rút gọn và chỉ trả về một lệnh ngắn, nên tốn rất ít token (tính vào bảng token của agent đó).</small>
+          <small>${t('Agent vào trận như một đấu thủ độc lập: mọi nhân vật khác đều là đối thủ, không có đồng minh. Vài giây một lần agent nhận tình hình rút gọn và chỉ trả về một lệnh ngắn, nên tốn rất ít token (tính vào bảng token của agent đó).')}</small>
         </div>
-        <div class="ar-keys"><b>Phím</b>
-          <span><kbd>W A S D</kbd> di chuyển · <kbd>Shift</kbd> chạy · <kbd>C</kbd> ngồi · <kbd>Space</kbd> nhảy</span>
-          <span><kbd>Chuột trái</kbd> bắn · <kbd>Chuột phải</kbd> ngắm · <kbd>R</kbd> nạp đạn · <kbd>F</kbd> nhặt</span>
-          <span><kbd>Tab</kbd> bảng nhặt đồ · <kbd>1 2 3</kbd> đổi súng · <kbd>4</kbd> băng gạc · <kbd>5</kbd> cứu thương · <kbd>Esc</kbd> tạm dừng</span></div>
-        <button class="ar-play">VÀO TRẬN</button>
-        <button class="ar-leave">VỀ VĂN PHÒNG</button>
+        <div class="ar-keys"><b>${t('Phím')}</b>
+          <span><kbd>W A S D</kbd> ${t('di chuyển')} · <kbd>Shift</kbd> ${t('chạy')} · <kbd>C</kbd> ${t('ngồi')} · <kbd>Space</kbd> ${t('nhảy')}</span>
+          <span><kbd>${t('Chuột trái')}</kbd> ${t('bắn')} · <kbd>${t('Chuột phải')}</kbd> ${t('ngắm')} · <kbd>R</kbd> ${t('nạp đạn')} · <kbd>F</kbd> ${t('nhặt')}</span>
+          <span><kbd>Tab</kbd> ${t('bảng nhặt đồ')} · <kbd>1 2 3</kbd> ${t('đổi súng')} · <kbd>4</kbd> ${t('băng gạc')} · <kbd>5</kbd> ${t('cứu thương')} · <kbd>Esc</kbd> ${t('tạm dừng')}</span></div>
+        <button class="ar-play">${t('VÀO TRẬN')}</button>
+        <button class="ar-leave">${t('VỀ VĂN PHÒNG')}</button>
       </aside>
     </div>
-    <div class="ar-loot"><div class="ar-loot-col"><h3>XUNG QUANH</h3><div class="ar-near"></div></div>
-      <div class="ar-loot-col"><h3>TRÊN NGƯỜI</h3><div class="ar-mine"></div></div>
-      <div class="ar-loot-keys"><kbd>Chuột trái</kbd> nhặt / dùng · <kbd>Chuột phải</kbd> vứt xuống · <kbd>Tab</kbd> đóng</div></div>
-    <div class="ar-pause"><div class="ar-panel"><h2>TẠM DỪNG</h2>
-      <button data-act="resume">TIẾP TỤC</button><button data-act="lobby">VỀ PHÒNG CHỜ</button><button data-act="office">VỀ VĂN PHÒNG</button></div></div>
+    <div class="ar-loot"><div class="ar-loot-col"><h3>${t('XUNG QUANH')}</h3><div class="ar-near"></div></div>
+      <div class="ar-loot-col"><h3>${t('TRÊN NGƯỜI')}</h3><div class="ar-mine"></div></div>
+      <div class="ar-loot-keys"><kbd>${t('Chuột trái')}</kbd> ${t('nhặt / dùng')} · <kbd>${t('Chuột phải')}</kbd> ${t('vứt xuống')} · <kbd>Tab</kbd> ${t('đóng')}</div></div>
+    <div class="ar-pause"><div class="ar-panel"><h2>${t('TẠM DỪNG')}</h2>
+      <button data-act="resume">${t('TIẾP TỤC')}</button><button data-act="lobby">${t('VỀ PHÒNG CHỜ')}</button><button data-act="office">${t('VỀ VĂN PHÒNG')}</button></div></div>
     <div class="ar-end"><div class="ar-panel"><h2 class="ar-end-title"></h2><p class="ar-end-sub"></p>
-      <button data-act="again">CHƠI LẠI</button><button data-act="lobby">VỀ PHÒNG CHỜ</button><button data-act="office">VỀ VĂN PHÒNG</button></div></div>`;
+      <button data-act="again">${t('CHƠI LẠI')}</button><button data-act="lobby">${t('VỀ PHÒNG CHỜ')}</button><button data-act="office">${t('VỀ VĂN PHÒNG')}</button></div></div>`;
   document.body.append(root);
   if (!document.querySelector('link[data-arena]')) {
     const css = Object.assign(document.createElement('link'), { rel: 'stylesheet', href: BASE + 'arena.css' });
@@ -85,7 +87,7 @@ export function createArena({ call, agents: agentSource = [], onExit }) {
     scene.environment = env;
     scene.environmentIntensity = 0.25;   // reflections for metal and water; the sun and sky do the lighting
     camera = new THREE.PerspectiveCamera(70, 1, 0.08, 1200);
-    loading('Đang tải danh mục trang phục…');
+    loading(t('Đang tải danh mục trang phục…'));
     manifest = await (await fetch(BASE + 'manifest.json', { cache: 'no-store' })).json();
     skins = manifest.skins || [];
     if (!skins.some((s) => s.id === sel.skin)) sel.skin = skins.find((s) => !s.price)?.id || skins[0]?.id;
@@ -107,7 +109,7 @@ export function createArena({ call, agents: agentSource = [], onExit }) {
     const map = MAPS.find((m) => m.id === sel.map) || MAPS[0];
     if (island?.map.id === map.id) return;
     if (island) { scene.remove(island.group); island.dispose(); }
-    loading(`Đang dựng ${map.name}: địa hình, cây cối, làng mạc…`);
+    loading(t('Đang dựng {map}: địa hình, cây cối, làng mạc…', { map: t(map.name) }));
     island = new Island(1 + Math.floor(Math.random() * 9999), map);
     await island.build(renderer);
     scene.add(island.group);
@@ -116,7 +118,7 @@ export function createArena({ call, agents: agentSource = [], onExit }) {
   }
   function renderMaps() {
     $('.ar-maps').innerHTML = MAPS.map((m) => `<button class="ar-map-card${m.id === sel.map ? ' on' : ''}" data-map="${m.id}"
-      style="--a:${m.art[0]};--b:${m.art[1]}"><b>${esc(m.name)}</b><small>${esc(m.desc)}</small></button>`).join('');
+      style="--a:${m.art[0]};--b:${m.art[1]}"><b>${esc(t(m.name))}</b><small>${esc(t(m.desc))}</small></button>`).join('');
     root.querySelectorAll('[data-map]').forEach((b) => { b.onclick = () => { sel.map = b.dataset.map; store.set('map', sel.map); renderMaps(); }; });
   }
   function loading(text) { $('.ar-loading small').textContent = text; }
@@ -136,7 +138,7 @@ export function createArena({ call, agents: agentSource = [], onExit }) {
       const has = owned.has(s.id) || !s.price;
       return `<button class="ar-skin${s.id === sel.skin ? ' on' : ''}${has ? '' : ' locked'}" data-id="${s.id}">
         <span class="ar-thumb" style="background-image:url('${BASE}skins/${encodeURIComponent(s.thumb)}')"></span>
-        <b>${esc(s.name)}</b><small>${has ? (s.id === sel.skin ? 'Đang mặc' : 'Đã có') : `${s.price} coin`}</small></button>`;
+        <b>${esc(t(s.name))}</b><small>${has ? (s.id === sel.skin ? t('Đang mặc') : t('Đã có')) : t('{n} coin', { n: s.price })}</small></button>`;
     }).join('');
     root.querySelectorAll('.ar-skin').forEach((b) => {
       b.onclick = () => {
@@ -145,7 +147,7 @@ export function createArena({ call, agents: agentSource = [], onExit }) {
           if (b.classList.contains('confirm')) { call('arenaBuy', s.id); b.classList.remove('confirm'); return; }
           root.querySelectorAll('.ar-skin.confirm').forEach((x) => x.classList.remove('confirm'));
           b.classList.add('confirm');
-          b.querySelector('small').textContent = wallet.coins >= s.price ? `Bấm lần nữa để mua (${s.price} coin)` : `Thiếu ${s.price - wallet.coins} coin`;
+          b.querySelector('small').textContent = wallet.coins >= s.price ? t('Bấm lần nữa để mua ({n} coin)', { n: s.price }) : t('Thiếu {n} coin', { n: s.price - wallet.coins });
           showSkin(s);
           return;
         }
@@ -153,11 +155,11 @@ export function createArena({ call, agents: agentSource = [], onExit }) {
         renderSkins(); showSkin(s);
       };
     });
-    $('.ar-coins').textContent = wallet.coins.toLocaleString('vi-VN');
-    $('.ar-earn').textContent = `${wallet.tokens.toLocaleString('vi-VN')} token · ${wallet.rate.toLocaleString('vi-VN')} token = 1 coin`;
+    $('.ar-coins').textContent = wallet.coins.toLocaleString(LOCALE);
+    $('.ar-earn').textContent = t('{tokens} token · {rate} token = 1 coin', { tokens: wallet.tokens.toLocaleString(LOCALE), rate: wallet.rate.toLocaleString(LOCALE) });
   }
   async function showSkin(s) {
-    $('.ar-skin-name').textContent = s.name;
+    $('.ar-skin-name').textContent = t(s.name);
     preview ||= new Preview($('.ar-stage'), env);
     preview.show(await loadAvatar(BASE + 'skins/' + s.file));
   }
@@ -196,9 +198,9 @@ export function createArena({ call, agents: agentSource = [], onExit }) {
   async function startMatch() {
     endMatch();
     root.className = 'arena loading';
-    loading('Đang vào trận…');
+    loading(t('Đang vào trận…'));
     await ensureIsland();
-    loading('Đang vào trận…');
+    loading(t('Đang vào trận…'));
     const skin = skins.find((s) => s.id === sel.skin) || skins[0];
     const loaded = await Promise.allSettled(skins.map((s) => loadAvatar(BASE + 'skins/' + s.file)));
     const assets = loaded.filter((r) => r.status === 'fulfilled').map((r) => r.value);
@@ -227,7 +229,7 @@ export function createArena({ call, agents: agentSource = [], onExit }) {
     look.yaw = match.player.yaw; look.pitch = 0;
     state = 'match';
     root.className = 'arena playing';
-    hud.message('Vào trận! Nhặt vũ khí, ở trong vùng an toàn và sống sót.', 4);
+    hud.message(t('Vào trận! Nhặt vũ khí, ở trong vùng an toàn và sống sót.'), 4);
     canvas.requestPointerLock?.();
   }
   function endMatch() {
@@ -244,9 +246,9 @@ export function createArena({ call, agents: agentSource = [], onExit }) {
       state = 'ended';
       document.exitPointerLock?.();
       root.className = 'arena playing ended';
-      $('.ar-end-title').textContent = r.win ? 'CHIẾN THẮNG!' : `HẠNG #${r.rank}`;
-      $('.ar-end-sub').textContent = r.win ? `Bạn là người cuối cùng trên đảo · ${r.kills} hạ gục`
-        : `${r.killer ? `Bị ${r.killer} hạ gục` : 'Gục ngoài vùng an toàn'} · ${r.kills} hạ gục · còn ${match.alive}/${r.total} người`;
+      $('.ar-end-title').textContent = r.win ? t('CHIẾN THẮNG!') : t('HẠNG #{rank}', { rank: r.rank });
+      $('.ar-end-sub').textContent = r.win ? t('Bạn là người cuối cùng trên đảo · {kills} hạ gục', { kills: r.kills })
+        : t('{cause} · {kills} hạ gục · còn {alive}/{total} người', { cause: r.killer ? t('Bị {killer} hạ gục', { killer: r.killer }) : t('Gục ngoài vùng an toàn'), kills: r.kills, alive: match.alive, total: r.total });
     }, r.win ? 600 : 1800);
   }
   function pause() { if (state !== 'match') return; state = 'paused'; root.classList.add('paused'); }
@@ -321,19 +323,19 @@ export function createArena({ call, agents: agentSource = [], onExit }) {
     let html = '';
     for (const it of near) {
       if (it.kind === 'box') {
-        html += `<div class="ar-box">Hòm đồ của ${esc(it.owner)}</div>`;
+        html += `<div class="ar-box">${t('Hòm đồ của {owner}', { owner: esc(it.owner) })}</div>`;
         for (const e of match.boxEntries(it)) html += row(esc(e.label), { take: () => match.takeFromBox(p, it, e) }, 'in-box');
       } else html += row(esc(match.itemLabel(it)), { take: () => match.pickup(p, it) });
     }
-    $('.ar-near').innerHTML = html || '<div class="ar-empty">Không có gì trong tầm tay</div>';
+    $('.ar-near').innerHTML = html || `<div class="ar-empty">${t('Không có gì trong tầm tay')}</div>`;
     const slots = [0, 1, 2].map((i) => {
       const w = p.slots[i];
       return w ? row(`<kbd>${i + 1}</kbd><b>${esc(WEAPONS[w.id].name)}</b><small>${w.mag} / ${p.ammo[WEAPONS[w.id].ammo]}</small>`, { take: () => p.switchTo(i), drop: () => match.drop(p, { slot: i }) }, p.cur === i ? 'on' : '')
-        : `<div class="ar-row empty"><kbd>${i + 1}</kbd>${i === 2 ? 'Súng lục' : 'Súng chính'} — trống</div>`;
+        : `<div class="ar-row empty"><kbd>${i + 1}</kbd>${t('{slot} — trống', { slot: i === 2 ? t('Súng lục') : t('Súng chính') })}</div>`;
     }).join('');
-    const ammo = Object.entries(p.ammo).filter(([, n]) => n > 0).map(([k, n]) => row(`Đạn ${AMMO[k]}<small>×${n}</small>`, { drop: () => match.drop(p, { ammo: k }) })).join('');
-    const meds = Object.entries(p.meds).filter(([, n]) => n > 0).map(([k, n]) => row(`${k === 'medkit' ? 'Bộ cứu thương' : 'Băng gạc'}<small>×${n}</small>`, { take: () => p.useMed(k), drop: () => match.drop(p, { med: k }) })).join('');
-    $('.ar-mine').innerHTML = slots + `<div class="ar-row static">Áo giáp<small>${Math.round(p.armor)}</small></div>` + ammo + meds;
+    const ammo = Object.entries(p.ammo).filter(([, n]) => n > 0).map(([k, n]) => row(`${t('Đạn {ammo}', { ammo: AMMO[k] })}<small>×${n}</small>`, { drop: () => match.drop(p, { ammo: k }) })).join('');
+    const meds = Object.entries(p.meds).filter(([, n]) => n > 0).map(([k, n]) => row(`${k === 'medkit' ? t('Bộ cứu thương') : t('Băng gạc')}<small>×${n}</small>`, { take: () => p.useMed(k), drop: () => match.drop(p, { med: k }) })).join('');
+    $('.ar-mine').innerHTML = slots + `<div class="ar-row static">${t('Áo giáp')}<small>${Math.round(p.armor)}</small></div>` + ammo + meds;
   }
   root.querySelector('.ar-loot').addEventListener('mousedown', (e) => {
     const b = e.target.closest('[data-row]');
@@ -446,7 +448,7 @@ export function createArena({ call, agents: agentSource = [], onExit }) {
         toLobby();
       } catch (e) {
         console.error(e);
-        loading(`Không mở được game: ${e.message}`);
+        loading(t('Không mở được game: {error}', { error: e.message }));
       }
     },
     close() {

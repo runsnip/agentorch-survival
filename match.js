@@ -7,12 +7,13 @@
 import * as THREE from 'three';
 import { WEAPONS, AMMO, buildGun } from './weapons.js';
 import { makeBody, ArmRig, BODY_H } from './actors.js';
+import { t as tr } from '/i18n.js';
 
 export const EYE = 1.62, EYE_CROUCH = 1.12, RADIUS = 0.35;
 const GRAVITY = 15, JUMP = 4.8;
 const SPEED = { walk: 4.6, sprint: 7.0, crouch: 2.3, ads: 2.6 };
 const AMMO_PACK = { '9mm': 30, '556': 30, '762': 20, '12g': 12 };
-const MEDS = { bandage: { name: 'Băng gạc', heal: 15, cap: 75, time: 3 }, medkit: { name: 'Bộ cứu thương', heal: 100, cap: 100, time: 6 } };
+const MEDS = { bandage: { name: tr('Băng gạc'), heal: 15, cap: 75, time: 3 }, medkit: { name: tr('Bộ cứu thương'), heal: 100, cap: 100, time: 6 } };
 export const PHASES = [
   { wait: 70, shrink: 45, r: 175, dps: 1 },
   { wait: 50, shrink: 35, r: 105, dps: 2 },
@@ -213,10 +214,10 @@ export class Match {
   }
   itemLabel(it) {
     if (it.kind === 'weapon') return `${WEAPONS[it.id].name}`;
-    if (it.kind === 'ammo') return `Đạn ${AMMO[it.ammo]} ×${it.n || AMMO_PACK[it.ammo]}`;
+    if (it.kind === 'ammo') return tr('Đạn {ammo} ×{n}', { ammo: AMMO[it.ammo], n: it.n || AMMO_PACK[it.ammo] });
     if (it.kind === 'med') return `${MEDS[it.med].name}${it.n > 1 ? ` ×${it.n}` : ''}`;
-    if (it.kind === 'armor') return `Áo giáp (${it.value})`;
-    return `Hòm đồ của ${it.owner}`;
+    if (it.kind === 'armor') return tr('Áo giáp ({value})', { value: it.value });
+    return tr('Hòm đồ của {owner}', { owner: it.owner });
   }
   // what a unit can pick up within reach (the player: the one under the crosshair if any)
   nearestItem(u, reach = 2.2, dir = null) {
@@ -234,9 +235,9 @@ export class Match {
   boxEntries(box) {
     return [
       ...box.weapons.map((w, i) => ({ kind: 'weapon', id: w.id, i, label: WEAPONS[w.id].name })),
-      ...Object.entries(box.ammo).filter(([, n]) => n > 0).map(([k, n]) => ({ kind: 'ammo', ammo: k, n, label: `Đạn ${AMMO[k]} ×${n}` })),
+      ...Object.entries(box.ammo).filter(([, n]) => n > 0).map(([k, n]) => ({ kind: 'ammo', ammo: k, n, label: tr('Đạn {ammo} ×{n}', { ammo: AMMO[k], n }) })),
       ...Object.entries(box.meds).filter(([, n]) => n > 0).map(([k, n]) => ({ kind: 'med', med: k, n, label: `${MEDS[k].name} ×${n}` })),
-      ...(box.armor > 0 ? [{ kind: 'armor', value: Math.round(box.armor), label: `Áo giáp (${Math.round(box.armor)})` }] : []),
+      ...(box.armor > 0 ? [{ kind: 'armor', value: Math.round(box.armor), label: tr('Áo giáp ({value})', { value: Math.round(box.armor) }) }] : []),
     ];
   }
   takeFromBox(u, box, e) {
@@ -369,7 +370,7 @@ export class Match {
     t.alive = false; t.hp = 0; t.diedAt = this.time;
     if (by && by !== t) by.kills++;
     this.alive = this.units.filter((u) => u.alive).length;
-    this.events.feed?.(by && by !== t ? `${by.name} ${head ? '⌖' : '▸'} ${t.name}` : `${t.name} gục ngoài vùng an toàn`, by, t);
+    this.events.feed?.(by && by !== t ? `${by.name} ${head ? '⌖' : '▸'} ${t.name}` : tr('{name} gục ngoài vùng an toàn', { name: t.name }), by, t);
     // what they carried drops as a box
     const box = { kind: 'box', owner: t.name, weapons: t.slots.filter(Boolean), ammo: { ...t.ammo }, meds: { ...t.meds }, armor: t.armor };
     this.addItem(box, t.pos.clone());
@@ -438,7 +439,7 @@ export class Match {
       z.state = 'shrink'; z.phase = Math.min(z.phase + 1, PHASES.length - 1);
       const ph = PHASES[z.phase];
       z.t = ph.shrink; z.from = { cx: z.cx, cz: z.cz, r: z.r }; z.dps = ph.dps;
-      this.events.message?.('Vùng an toàn đang thu hẹp!');
+      this.events.message?.(tr('Vùng an toàn đang thu hẹp!'));
     } else if (z.state === 'shrink') {
       const ph = PHASES[z.phase], k = 1 - Math.max(0, z.t) / ph.shrink;
       z.cx = z.from.cx + (z.next.cx - z.from.cx) * k; z.cz = z.from.cz + (z.next.cz - z.from.cz) * k; z.r = z.from.r + (z.next.r - z.from.r) * k;
