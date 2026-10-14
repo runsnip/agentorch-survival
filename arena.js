@@ -495,7 +495,7 @@ export function createArena({ call, agents: agentSource = [], onExit }) {
   // ---------------------------------------------------------------- API
   const arena = {
     get active() { return state !== 'closed'; },
-    debug: () => ({ match, look, keys, mouse, state, start: startMatch }),
+    debug: () => ({ match, look, keys, mouse, state, vm, start: startMatch }),
     async open() {
       if (state !== 'closed') return;
       state = 'loading';

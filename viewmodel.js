@@ -114,7 +114,7 @@ export class Viewmodel {
       const heavy = this.current?.def.cat === 'sr' || this.current?.def.cat === 'sg';
       this.kick = Math.min(this.kick + (heavy ? 0.07 : 0.025), 0.09);
       this.kickRot = Math.min(this.kickRot + (heavy ? 0.18 : 0.05), 0.32);
-      this.flash.visible = true; this.flash.material.rotation = Math.random() * 6.28; this.flashT = 0.05;
+      this.flash.visible = true; this.flash.rotation.z = Math.random() * 6.28; this.flashT = 0.05;
     }
     this.kick = ease(this.kick, 0, 14); this.kickRot = ease(this.kickRot, 0, 10);
     this.flashT = (this.flashT || 0) - dt;

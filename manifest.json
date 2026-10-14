@@ -1,7 +1,7 @@
 {
  "name": "arena",
  "title": "Đảo sinh tồn",
- "version": "0.5.0",
+ "version": "0.5.1",
  "entry": "arena.js",
  "requires": {
   "host": 2

@@ -873,26 +873,29 @@ class Tracers {
 }
 
 class Puffs {
+  // where a bullet lands: a little burst of 3D grit (dust off a wall, blood off a body) that flies out and settles
   constructor(group) {
     this.group = group; this.list = [];
-    const c = document.createElement('canvas'); c.width = c.height = 64;
-    const x = c.getContext('2d'), rg = x.createRadialGradient(32, 32, 0, 32, 32, 32);
-    rg.addColorStop(0, 'rgba(255,255,255,.9)'); rg.addColorStop(1, 'rgba(255,255,255,0)');
-    x.fillStyle = rg; x.fillRect(0, 0, 64, 64);
-    this.tex = new THREE.CanvasTexture(c);
+    this.geo = new THREE.IcosahedronGeometry(1, 0);
   }
   add(p, color) {
-    const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: this.tex, color, transparent: true, depthWrite: false }));
-    s.position.copy(p); s.scale.setScalar(0.25);
-    this.group.add(s);
-    this.list.push({ s, t: 0.5 });
+    const mat = new THREE.MeshLambertMaterial({ color, transparent: true, flatShading: true });
+    const bits = [];
+    for (let i = 0; i < 7; i++) {
+      const m = new THREE.Mesh(this.geo, mat);
+      m.position.copy(p); m.scale.setScalar(0.025 + Math.random() * 0.04);
+      m.rotation.set(Math.random() * 6, Math.random() * 6, 0);
+      const v = new THREE.Vector3(Math.random() - 0.5, Math.random() * 0.8 + 0.2, Math.random() - 0.5).normalize().multiplyScalar(1.2 + Math.random() * 1.8);
+      this.group.add(m); bits.push({ m, v });
+    }
+    this.list.push({ bits, mat, t: 0.6 });
   }
   update(dt) {
     this.list = this.list.filter((p) => {
       p.t -= dt;
-      p.s.scale.setScalar(0.25 + (0.5 - p.t) * 1.4);
-      p.s.material.opacity = Math.max(0, p.t * 2);
-      if (p.t <= 0) { this.group.remove(p.s); p.s.material.dispose(); return false; }
+      for (const b of p.bits) { b.v.y -= 6 * dt; b.m.position.addScaledVector(b.v, dt); b.m.rotation.x += dt * 8; }
+      p.mat.opacity = Math.min(1, p.t * 3);
+      if (p.t <= 0) { for (const b of p.bits) this.group.remove(b.m); p.mat.dispose(); return false; }
       return true;
     });
   }

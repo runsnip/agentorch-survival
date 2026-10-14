@@ -5,6 +5,7 @@
 // `sightY` the height of the sight line above the grip, `muzzle` the barrel tip.
 
 import * as THREE from 'three';
+import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { t } from '/i18n.js';
 
 export const AMMO = { '9mm': '9mm', '556': '5.56', '762': '7.62', '12g': '12 gauge' };
@@ -236,23 +237,31 @@ export function buildGun(id) {
 
 // ---------------------------------------------------------------- muzzle flash
 
-let flashTex = null;
+let flashGeo = null;
 export function muzzleFlash() {
-  if (!flashTex) {
-    const c = document.createElement('canvas');
-    c.width = c.height = 128;
-    const g = c.getContext('2d');
-    const rg = g.createRadialGradient(64, 64, 0, 64, 64, 64);
-    rg.addColorStop(0, 'rgba(255,250,220,1)'); rg.addColorStop(0.25, 'rgba(255,200,90,.9)'); rg.addColorStop(1, 'rgba(255,120,20,0)');
-    g.fillStyle = rg;
-    for (let i = 0; i < 5; i++) {   // a star of flame tongues
-      g.save(); g.translate(64, 64); g.rotate(i * 1.2566);
-      g.beginPath(); g.moveTo(0, -6); g.lineTo(64, 0); g.lineTo(0, 6); g.fill(); g.restore();
+  // a burst of flame in 3D: a hot core, a long tongue out of the barrel (−z) and shorter ones splayed round it,
+  // white at the root fading to orange at the tips. Spin it (rotation.z) per shot so no two look alike.
+  if (!flashGeo) {
+    const parts = [];
+    const tongue = (len, r, tiltX, spin) => {
+      const g = new THREE.ConeGeometry(r, len, 6, 1, true).translate(0, len / 2, 0).rotateX(-Math.PI / 2);   // tip toward −z
+      g.rotateX(tiltX); g.rotateZ(spin);
+      return g;
+    };
+    parts.push(new THREE.IcosahedronGeometry(0.2, 1));
+    parts.push(tongue(1.7, 0.32, 0, 0));
+    for (let i = 0; i < 5; i++) parts.push(tongue(0.6, 0.1, 0.95, i * 1.2566));
+    flashGeo = mergeGeometries(parts.map((g) => g.toNonIndexed()));
+    // colour by distance from the root
+    const P = flashGeo.attributes.position, C = new Float32Array(P.count * 3), hot = new THREE.Color('#ffc865'), tip = new THREE.Color('#d8400a');
+    for (let i = 0; i < P.count; i++) {
+      const d = Math.min(1, Math.hypot(P.getX(i), P.getY(i), P.getZ(i)) / 1.4), c = hot.clone().lerp(tip, d);
+      C.set([c.r, c.g, c.b], i * 3);
     }
-    g.beginPath(); g.arc(64, 64, 26, 0, 7); g.fill();
-    flashTex = new THREE.CanvasTexture(c);
+    flashGeo.setAttribute('color', new THREE.BufferAttribute(C, 3));
   }
-  const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: flashTex, blending: THREE.AdditiveBlending, depthWrite: false, transparent: true }));
-  s.visible = false;
-  return s;
+  const m = new THREE.Mesh(flashGeo, new THREE.MeshBasicMaterial({ vertexColors: true, blending: THREE.AdditiveBlending,
+    depthWrite: false, transparent: true, opacity: 0.55, side: THREE.DoubleSide }));
+  m.visible = false;
+  return m;
 }
