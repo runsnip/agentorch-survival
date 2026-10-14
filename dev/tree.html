@@ -5,12 +5,12 @@
 <script type=module>
 // Dev page: one plant kind on a lawn, seen from the side. ?k=oak_a
 import * as THREE from 'three';
-import { buildFlora } from '../flora.js';
+import { buildFlora } from '/flora.js';
 const q = new URLSearchParams(location.search), k = q.get('k') || 'oak_a';
 const r = new THREE.WebGLRenderer({ antialias: true }); r.setSize(innerWidth, innerHeight); document.body.append(r.domElement);
 r.toneMapping = THREE.ACESFilmicToneMapping; r.toneMappingExposure = 0.95; r.shadowMap.enabled = true;
 const s = new THREE.Scene(); s.background = new THREE.Color(0xa9c6dd);
-const f = await buildFlora(), d = f.kinds[k];
+const f = await buildFlora(), d = { ...f.kinds[k], ...f.kinds[k][q.get('lod') || 'near'] };   // ?lod=far for the light version
 const sun = new THREE.DirectionalLight(0xfff0d6, 2.3); sun.position.set(20, 30, 15); sun.castShadow = true; sun.shadow.mapSize.set(2048, 2048);
 Object.assign(sun.shadow.camera, { left: -15, right: 15, top: 15, bottom: -15 });
 s.add(new THREE.HemisphereLight(0xbcd4ec, 0x4a4a32, 0.85), sun);

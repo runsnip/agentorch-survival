@@ -5,7 +5,7 @@
 // the island is centred on the origin and the sea level is y = 0.
 
 import * as THREE from 'three';
-import { buildFlora, seeded } from '/flora.js';   // shared with the office's street trees
+import { buildFlora, plantTrees, seeded } from '/flora.js';   // shared with the office's street trees
 
 // the island's own ground photographs (tex/SOURCES.md)
 const TEX = new URL('./tex/', import.meta.url).href;
@@ -356,11 +356,9 @@ export class Island {
       m.computeBoundingSphere();
       this.group.add(m);
     };
-    for (const k of kinds) {
-      const d = f.kinds[k];
-      inst(d.trunk, d.trunkMat, place[k]);
-      inst(d.leaves, d.leafMat, place[k]);
-    }
+    // every leaf in 3D near the player, a lighter version further off (plantTrees swaps them)
+    this.forest = plantTrees(this.group, f, kinds.flatMap((k) => place[k].map(([x, z, s]) => (
+      { kind: k, x, y: this.heightAt(x, z) - 0.1 * s, z, s, rot: (x * 13.1 + z * 7.7) % 6.283 }))), { near: 40, maxNear: 24 });
     f.rocks.forEach((r, i) => inst(r.geo, f.rockMat, rocks[i], true, 0.25));
     // a few loot spots out in the open too
     for (let n = 0; n < 60; n++) {
@@ -470,6 +468,7 @@ export class Island {
 
   update(dt, viewer) {
     this.flora.wind.value += dt;
+    if (viewer) this.forest?.update(viewer, dt);
     this.waterTime.value += dt;
     this.sky.position.copy(viewer);
     this.grass.follow(viewer);
