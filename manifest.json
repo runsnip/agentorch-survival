@@ -3,6 +3,9 @@
  "title": "Đảo sinh tồn",
  "version": "0.1.0",
  "entry": "arena.js",
+ "requires": {
+  "host": 1
+ },
  "skins": [
   {
    "id": "military-male-01",
