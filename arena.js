@@ -228,7 +228,7 @@ export function createArena({ call, agents: agentSource = [], onExit }) {
   // ---- the stakes (agentorch/inventory.py): the app takes the fee before the match and pays back after it, by how
   // it was played. This side only asks and reports; an app too old to answer lets the match start without stakes.
   let matchId = null, entering = 0;
-  const feeNow = () => 15;
+  const feeNow = () => (sel.agentOn && agentsNow().length ? wallet?.fee_agent ?? 150 : wallet?.fee ?? 100);   // the app's figure (it grows with the purse)
   function renderPlay() {
     const b = $('.ar-play');
     if (b) b.innerHTML = `${t('VÀO TRẬN')} <small>· ${t('{n} coin', { n: feeNow() })}</small>`;
@@ -572,7 +572,7 @@ export function createArena({ call, agents: agentSource = [], onExit }) {
         if (msg.skin && skins.some((s) => s.id === msg.skin) && !store.get('skin', '')) sel.skin = msg.skin;
         // the finish equipped in the inventory, on every gun in the player's hands
         vm?.setFinish((msg.inventory || []).find((it) => it.id === msg.equipped?.finish && it.count > 0) || null);
-        if (state === 'lobby') { renderSkins(); renderStarters(); renderGear(); if (msg.error) $('.ar-earn').textContent = msg.error; }
+        if (state === 'lobby') { renderSkins(); renderStarters(); renderGear(); renderPlay(); if (msg.error) $('.ar-earn').textContent = msg.error; }
       } else if (msg.type === 'arena_enter') entered(msg);
       else if (msg.type === 'arena_result') paid(msg);
       else if (msg.type === 'arena_agent') agentOrder(msg);
