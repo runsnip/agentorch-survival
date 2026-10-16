@@ -228,7 +228,7 @@ export function createArena({ call, agents: agentSource = [], onExit }) {
   // ---- the stakes (agentorch/inventory.py): the app takes the fee before the match and pays back after it, by how
   // it was played. This side only asks and reports; an app too old to answer lets the match start without stakes.
   let matchId = null, entering = 0;
-  const feeNow = () => (sel.agentOn && agentsNow().length ? wallet?.fee_agent ?? 150 : wallet?.fee ?? 100);   // the app's figure (it grows with the purse)
+  const feeNow = () => (sel.agentOn && agentsNow().length ? wallet?.fee_agent ?? 300 : wallet?.fee ?? 200);   // the app's figures
   function renderPlay() {
     const b = $('.ar-play');
     if (b) b.innerHTML = `${t('VÀO TRẬN')} <small>· ${t('{n} coin', { n: feeNow() })}</small>`;
