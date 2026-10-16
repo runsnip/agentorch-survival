@@ -60,7 +60,7 @@ export function createArena({ call, agents: agentSource = [], onExit }) {
           <span><kbd>W A S D</kbd> ${t('di chuyển')} · <kbd>Shift</kbd> ${t('chạy')} · <kbd>C</kbd> ${t('ngồi')} · <kbd>Space</kbd> ${t('nhảy')}</span>
           <span><kbd>${t('Chuột trái')}</kbd> ${t('bắn')} · <kbd>${t('Chuột phải')}</kbd> ${t('ngắm')} · <kbd>R</kbd> ${t('nạp đạn')} · <kbd>F</kbd> ${t('nhặt')}</span>
           <span><kbd>Tab</kbd> ${t('bảng nhặt đồ')} · <kbd>1 2 3</kbd> ${t('đổi súng')} · <kbd>4</kbd> ${t('băng gạc')} · <kbd>5</kbd> ${t('cứu thương')} · <kbd>Esc</kbd> ${t('tạm dừng')}</span></div>
-        <div class="ar-stakes"><b>${t('LUẬT TRẬN')}</b><small>${t('Vào trận mất phí coin. Hết trận được trả lại theo cách chơi: hạng, hạ gục, giao tranh, di chuyển. Thắng được thưởng thêm, thắng khi có Agent được thưởng nhiều hơn. Nấp một chỗ đến cuối gần như không được gì. Bỏ trận giữa chừng là mất phí.')}</small></div>
+        <div class="ar-stakes"><b>${t('LUẬT TRẬN')}</b><small>${t('Vào trận mất phí coin. Hết trận được trả lại theo cách chơi: hạng, hạ gục, giao tranh, di chuyển. Thắng được thưởng thêm. Có BOT do Agent điều khiển trong trận thì thưởng tính cao hơn. Nấp một chỗ đến cuối gần như không được gì. Bỏ trận giữa chừng là mất phí.')}</small></div>
         <button class="ar-play">${t('VÀO TRẬN')}</button>
         <button class="ar-leave">${t('VỀ VĂN PHÒNG')}</button>
       </aside>
@@ -228,7 +228,7 @@ export function createArena({ call, agents: agentSource = [], onExit }) {
   // ---- the stakes (agentorch/inventory.py): the app takes the fee before the match and pays back after it, by how
   // it was played. This side only asks and reports; an app too old to answer lets the match start without stakes.
   let matchId = null, entering = 0;
-  const feeNow = () => (sel.agentOn && agentsNow().length ? 20 : 15);
+  const feeNow = () => 15;
   function renderPlay() {
     const b = $('.ar-play');
     if (b) b.innerHTML = `${t('VÀO TRẬN')} <small>· ${t('{n} coin', { n: feeNow() })}</small>`;
@@ -262,7 +262,7 @@ export function createArena({ call, agents: agentSource = [], onExit }) {
     box.innerHTML = msg.short ? `<p>${t('Trận quá ngắn: không được trả lại.')}</p>` : `
       <div class="ar-pay-parts">${rows.map(([k, v]) => `<span><small>${k}</small><b>${v}</b></span>`).join('')}</div>
       ${msg.gate < 1 ? `<p class="ar-pay-warn">${t('Ít giao tranh và di chuyển: phần trả lại bị giảm, không có thưởng thắng.')}</p>` : ''}
-      <div class="ar-pay-sum"><span>${t('Phí vào trận')} <b>-${msg.fee}</b></span><span>${t('Trả lại')} <i>${bonus.win ? `<em>${t('gồm thưởng thắng')}</em> ` : ''}${bonus.agent_win ? `<em>${t('thắng Agent')}</em> ` : ''}${bonus.agent_down ? `<em>${t('hạ Agent')}</em> ` : ''}<b>+${msg.back}</b></i></span>
+      <div class="ar-pay-sum"><span>${t('Phí vào trận')} <b>-${msg.fee}</b></span><span>${t('Trả lại')} <i>${[bonus.win && t('gồm thưởng thắng'), msg.rate > 1 && t('Agent ×{r}', { r: msg.rate }), bonus.agent_down && t('hạ Agent')].filter(Boolean).map((x) => `<em>${x}</em>`).join(' · ')} <b>+${msg.back}</b></i></span>
         <span class="${msg.net >= 0 ? 'up' : 'down'}">${msg.net >= 0 ? t('Lời') : t('Lỗ')} <b>${msg.net >= 0 ? '+' : ''}${msg.net} coin</b></span><span>${t('Kinh nghiệm')} <b>+${msg.xp} XP</b></span></div>
       ${msg.up ? `<p class="ar-pay-up">${t('LÊN CẤP {n}!', { n: msg.level.level })}</p>` : ''}`;
   }
