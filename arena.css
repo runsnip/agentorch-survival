@@ -217,3 +217,23 @@
 .ar-gear-row button { padding: 5px 9px; font: 600 12px -apple-system, sans-serif; color: #dfe6ef; cursor: pointer; background: rgba(255,255,255,.05);
   border: 1px solid rgba(255,255,255,.14); clip-path: polygon(6px 0, 100% 0, 100% calc(100% - 6px), calc(100% - 6px) 100%, 0 100%, 0 6px); }
 .ar-gear-row button.on { color: #0b1220; background: linear-gradient(180deg, #7fc4ff, #3d8be0); border-color: #7fc4ff; }
+
+/* the stakes: the rule in the lobby, the fee on the button, what the match paid back on the end screen */
+.arena .ar-stakes { margin: 10px 0 8px; padding: 8px 10px; background: rgba(255,209,102,.07); border-left: 3px solid #ffd166; }
+.arena .ar-stakes b { display: block; font-size: 11px; letter-spacing: 1.5px; color: #ffd166; }
+.arena .ar-stakes small { display: block; margin-top: 3px; font-size: 11px; line-height: 1.45; color: #c5ccd8; }
+.arena .ar-play small { font-size: .7em; opacity: .85; }
+.arena .ar-pay { min-width: 360px; margin: 4px 0 14px; color: #dfe5ee; font-size: 13px; }
+.arena .ar-pay p { margin: 6px 0; }
+.arena .ar-pay-parts { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin-bottom: 8px; }
+.arena .ar-pay-parts span { padding: 6px 4px; text-align: center; background: rgba(255,255,255,.05); }
+.arena .ar-pay-parts small { display: block; font-size: 10px; letter-spacing: 1px; text-transform: uppercase; color: #8f99aa; }
+.arena .ar-pay-parts b { font: 800 16px ui-monospace, Menlo, monospace; color: #fff; }
+.arena .ar-pay-sum { display: grid; gap: 4px; padding: 8px 10px; background: rgba(0,0,0,.25); }
+.arena .ar-pay-sum span { display: flex; justify-content: space-between; gap: 10px; align-items: baseline; }
+.arena .ar-pay-sum b { font: 800 14px ui-monospace, Menlo, monospace; }
+.arena .ar-pay-sum em { font-style: normal; font-size: 10px; color: #ffd166; }
+.arena .ar-pay-sum .up b { color: #7fe08a; } .arena .ar-pay-sum .down b { color: #ff7a6a; }
+.arena .ar-pay p.ar-pay-warn { color: #ffb36b; font-size: 12px; }
+.arena .ar-pay-sum i { font-style: normal; }
+.arena .ar-pay p.ar-pay-up { font: 900 18px -apple-system, sans-serif; letter-spacing: 3px; color: #ffd166; text-shadow: 0 0 14px rgba(255,209,102,.6); }

@@ -154,6 +154,9 @@ export class Match {
       }
       return new THREE.Vector3(0, I.heightAt(0, 0), 0);
     };
+    // how the player plays, for the app to weigh the match (agentorch/inventory.py arena_score): metres moved, damage
+    // dealt, seconds spent fighting (a hit given or taken in the last 4 s), whether they took the company agent's bot down
+    this.stats = { moved: 0, dmg: 0, combat: 0, agentDown: false, lastFight: -99 };
     const player = this.player = new Unit(this, { id: 0, name: opts.playerName || PLAYER_NAMES[Math.floor(Math.random() * PLAYER_NAMES.length)], isPlayer: true, asset: opts.playerAsset });
     player.pos.copy(spot(60)); player.yaw = Math.atan2(player.pos.x, player.pos.z);   // facing the island's centre
     player.loadout = opts.playerGear || {};
@@ -367,6 +370,8 @@ export class Match {
   damage(t, amount, by, head, how) {
     if (!t.alive) return;
     if (t.armor > 0 && !head) { const absorb = amount * 0.4; const used = Math.min(t.armor, absorb); t.armor -= used; amount -= used; }
+    if (by?.isPlayer && t !== by) this.stats.dmg += Math.min(amount, t.hp + (t.armor || 0));
+    if ((by?.isPlayer && t !== by) || (t.isPlayer && by)) this.stats.lastFight = this.time;
     t.hp -= amount;
     t.lastHitBy = by; t.lastHitAt = this.time;
     if (by && by !== t) t.ai?.hurtBy(by);
@@ -377,6 +382,7 @@ export class Match {
   kill(t, by, head, how) {
     t.alive = false; t.hp = 0; t.diedAt = this.time;
     if (by && by !== t) by.kills++;
+    if (by?.isPlayer && t.agent) this.stats.agentDown = true;
     this.alive = this.units.filter((u) => u.alive).length;
     this.events.feed?.(by && by !== t ? `${by.name} ${head ? '⌖' : '▸'} ${t.name}` : tr('{name} gục ngoài vùng an toàn', { name: t.name }), by, t);
     // what they carried drops as a box
@@ -389,7 +395,9 @@ export class Match {
     this.over = true;
     const p = this.player;
     const rank = p.alive ? 1 : this.units.filter((u) => u.alive || u.diedAt > p.diedAt).length + 1;
-    this.events.end?.({ win: p.alive, rank, kills: p.kills, total: this.units.length, killer: p.alive ? null : p.lastHitBy?.name, time: this.time });
+    const { moved, dmg, combat, agentDown } = this.stats;
+    this.events.end?.({ win: p.alive, rank, kills: p.kills, total: this.units.length, killer: p.alive ? null : p.lastHitBy?.name, time: this.time,
+      stats: { win: p.alive, rank, kills: p.kills, alive: p.alive ? this.time : p.diedAt, moved: Math.round(moved), dmg: Math.round(dmg), combat: Math.round(combat), agentDown } });
   }
 
   // ---- per frame
@@ -402,7 +410,12 @@ export class Match {
       if (!u.alive) continue;
       u.tick(dt);
       if (u.ai) u.ai.update(dt);
+      const px = u.pos.x, pz = u.pos.z;
       this.physics(u, dt);
+      if (u.isPlayer) {
+        this.stats.moved += Math.min(1.5, Math.hypot(u.pos.x - px, u.pos.z - pz));   // (a jump in place isn't distance)
+        if (this.time - this.stats.lastFight < 4) this.stats.combat += dt;
+      }
       const z = this.zone;
       if (Math.hypot(u.pos.x - z.cx, u.pos.z - z.cz) > z.r) {
         u.zoneTick = (u.zoneTick || 0) + dt;

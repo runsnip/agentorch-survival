@@ -60,6 +60,7 @@ export function createArena({ call, agents: agentSource = [], onExit }) {
           <span><kbd>W A S D</kbd> ${t('di chuyển')} · <kbd>Shift</kbd> ${t('chạy')} · <kbd>C</kbd> ${t('ngồi')} · <kbd>Space</kbd> ${t('nhảy')}</span>
           <span><kbd>${t('Chuột trái')}</kbd> ${t('bắn')} · <kbd>${t('Chuột phải')}</kbd> ${t('ngắm')} · <kbd>R</kbd> ${t('nạp đạn')} · <kbd>F</kbd> ${t('nhặt')}</span>
           <span><kbd>Tab</kbd> ${t('bảng nhặt đồ')} · <kbd>1 2 3</kbd> ${t('đổi súng')} · <kbd>4</kbd> ${t('băng gạc')} · <kbd>5</kbd> ${t('cứu thương')} · <kbd>Esc</kbd> ${t('tạm dừng')}</span></div>
+        <div class="ar-stakes"><b>${t('LUẬT TRẬN')}</b><small>${t('Vào trận mất phí coin. Hết trận được trả lại theo cách chơi: hạng, hạ gục, giao tranh, di chuyển. Thắng được thưởng thêm, thắng khi có Agent được thưởng nhiều hơn. Nấp một chỗ đến cuối gần như không được gì. Bỏ trận giữa chừng là mất phí.')}</small></div>
         <button class="ar-play">${t('VÀO TRẬN')}</button>
         <button class="ar-leave">${t('VỀ VĂN PHÒNG')}</button>
       </aside>
@@ -69,7 +70,7 @@ export function createArena({ call, agents: agentSource = [], onExit }) {
       <div class="ar-loot-keys"><kbd>${t('Chuột trái')}</kbd> ${t('nhặt / dùng')} · <kbd>${t('Chuột phải')}</kbd> ${t('vứt xuống')} · <kbd>Tab</kbd> ${t('đóng')}</div></div>
     <div class="ar-pause"><div class="ar-panel"><h2>${t('TẠM DỪNG')}</h2>
       <button data-act="resume">${t('TIẾP TỤC')}</button><button data-act="lobby">${t('VỀ PHÒNG CHỜ')}</button><button data-act="office">${t('VỀ VĂN PHÒNG')}</button></div></div>
-    <div class="ar-end"><div class="ar-panel"><h2 class="ar-end-title"></h2><p class="ar-end-sub"></p>
+    <div class="ar-end"><div class="ar-panel"><h2 class="ar-end-title"></h2><p class="ar-end-sub"></p><div class="ar-pay"></div>
       <button data-act="again">${t('CHƠI LẠI')}</button><button data-act="lobby">${t('VỀ PHÒNG CHỜ')}</button><button data-act="office">${t('VỀ VĂN PHÒNG')}</button></div></div>`;
   document.body.append(root);
   if (!document.querySelector('link[data-arena]')) {
@@ -188,6 +189,7 @@ export function createArena({ call, agents: agentSource = [], onExit }) {
     root.querySelectorAll('[data-starter]').forEach((b) => { b.onclick = () => { sel.starter = sel.starter === b.dataset.starter ? '' : b.dataset.starter; renderStarters(); }; });
   }
   function renderSetup() {
+    renderPlay();
     const agents = agentsNow();
     $('.ar-bots').value = sel.bots; $('.ar-bots-val').textContent = sel.bots;
     $('.ar-agent-on').checked = sel.agentOn;
@@ -201,10 +203,10 @@ export function createArena({ call, agents: agentSource = [], onExit }) {
   $('.ar-bots').oninput = (e) => { sel.bots = +e.target.value; store.set('bots', sel.bots); $('.ar-bots-val').textContent = sel.bots; };
   $('.ar-agent-on').onchange = (e) => { sel.agentOn = e.target.checked; store.set('agentOn', sel.agentOn); renderSetup(); };
   $('.ar-agent-pick').onchange = (e) => { sel.agent = e.target.value; store.set('agent', sel.agent); };
-  $('.ar-play').onclick = () => startMatch();
+  $('.ar-play').onclick = () => enterMatch();
   $('.ar-leave').onclick = () => arena.close();
   root.querySelectorAll('[data-act]').forEach((b) => {
-    b.onclick = () => ({ resume: () => resume(), lobby: () => toLobby(), office: () => arena.close(), again: () => startMatch() })[b.dataset.act]();
+    b.onclick = () => ({ resume: () => resume(), lobby: () => toLobby(), office: () => arena.close(), again: () => enterMatch() })[b.dataset.act]();
   });
 
   function toLobby() {
@@ -223,6 +225,47 @@ export function createArena({ call, agents: agentSource = [], onExit }) {
   // anonymous usage (the app keeps only event names and properties it knows, see agentorch/telemetry.py)
   const track = (event, props) => call('track', event, JSON.stringify(props));
   let matchAt = 0, shotHeat = 0, stepT = 0;
+  // ---- the stakes (agentorch/inventory.py): the app takes the fee before the match and pays back after it, by how
+  // it was played. This side only asks and reports; an app too old to answer lets the match start without stakes.
+  let matchId = null, entering = 0;
+  const feeNow = () => (sel.agentOn && agentsNow().length ? 20 : 15);
+  function renderPlay() {
+    const b = $('.ar-play');
+    if (b) b.innerHTML = `${t('VÀO TRẬN')} <small>· ${t('{n} coin', { n: feeNow() })}</small>`;
+  }
+  function enterMatch() {
+    if (entering) return;
+    $('.ar-play').disabled = true;
+    entering = setTimeout(() => { entering = 0; $('.ar-play').disabled = false; matchId = null; startMatch(); }, 4000);
+    call('arenaEnter', JSON.stringify({ bots: sel.bots, agent: !!(sel.agentOn && agentsNow().length) }));
+  }
+  function entered(msg) {
+    if (!entering) return;
+    clearTimeout(entering); entering = 0;
+    $('.ar-play').disabled = false;
+    if (!msg.ok) {
+      if (state !== 'lobby') toLobby();
+      $('.ar-earn').textContent = t('Thiếu coin: vào trận cần {fee}, công ty đang có {coins}. Làm nhiệm vụ thành phố hoặc giao việc cho Agent để có thêm.', { fee: msg.fee, coins: msg.coins });
+      return;
+    }
+    matchId = msg.match;
+    if (wallet) wallet.coins = msg.coins;
+    startMatch();
+  }
+  function paid(msg) {
+    const box = $('.ar-pay');
+    if (!box) return;
+    if (!msg.ok) { box.innerHTML = ''; return; }
+    const pct = (x) => `${Math.round((x || 0) * 100)}%`;
+    const bonus = msg.bonus || {}, parts = msg.parts || {};
+    const rows = [[t('Hạng'), pct(parts.placement)], [t('Hạ gục'), pct(parts.kills)], [t('Giao tranh'), pct(parts.fight)], [t('Di chuyển'), pct(parts.move)]];
+    box.innerHTML = msg.short ? `<p>${t('Trận quá ngắn: không được trả lại.')}</p>` : `
+      <div class="ar-pay-parts">${rows.map(([k, v]) => `<span><small>${k}</small><b>${v}</b></span>`).join('')}</div>
+      ${msg.gate < 1 ? `<p class="ar-pay-warn">${t('Ít giao tranh và di chuyển: phần trả lại bị giảm, không có thưởng thắng.')}</p>` : ''}
+      <div class="ar-pay-sum"><span>${t('Phí vào trận')} <b>-${msg.fee}</b></span><span>${t('Trả lại')} <i>${bonus.win ? `<em>${t('gồm thưởng thắng')}</em> ` : ''}${bonus.agent_win ? `<em>${t('thắng Agent')}</em> ` : ''}${bonus.agent_down ? `<em>${t('hạ Agent')}</em> ` : ''}<b>+${msg.back}</b></i></span>
+        <span class="${msg.net >= 0 ? 'up' : 'down'}">${msg.net >= 0 ? t('Lời') : t('Lỗ')} <b>${msg.net >= 0 ? '+' : ''}${msg.net} coin</b></span><span>${t('Kinh nghiệm')} <b>+${msg.xp} XP</b></span></div>
+      ${msg.up ? `<p class="ar-pay-up">${t('LÊN CẤP {n}!', { n: msg.level.level })}</p>` : ''}`;
+  }
   async function startMatch() {
     endMatch();
     root.className = 'arena loading';
@@ -276,6 +319,7 @@ export function createArena({ call, agents: agentSource = [], onExit }) {
     call('arenaWallet');   // the inventory count went down
   }
   function endMatch() {
+    if (match && !match.over) matchId = null;   // left before the end: the fee stays spent
     if (lootOpen) toggleLoot(false);
     if (agentBot) call('arenaAgentStop');
     agentBot = null;
@@ -284,6 +328,8 @@ export function createArena({ call, agents: agentSource = [], onExit }) {
     hud?.el.remove(); hud = null;
   }
   function showEnd(r) {
+    $('.ar-pay').innerHTML = matchId ? `<p>${t('Đang tính phần trả lại…')}</p>` : '';
+    if (matchId) { call('arenaResult', JSON.stringify({ match: matchId, stats: r.stats })); matchId = null; }
     audio.music(null); audio.sting(r.win ? 'victory' : 'defeat');
     track('game_end', { place: r.win ? 1 : r.rank, kills: match?.player.kills || 0, minutes: Math.round((performance.now() - matchAt) / 60000) });
     setTimeout(() => {
@@ -527,7 +573,9 @@ export function createArena({ call, agents: agentSource = [], onExit }) {
         // the finish equipped in the inventory, on every gun in the player's hands
         vm?.setFinish((msg.inventory || []).find((it) => it.id === msg.equipped?.finish && it.count > 0) || null);
         if (state === 'lobby') { renderSkins(); renderStarters(); renderGear(); if (msg.error) $('.ar-earn').textContent = msg.error; }
-      } else if (msg.type === 'arena_agent') agentOrder(msg);
+      } else if (msg.type === 'arena_enter') entered(msg);
+      else if (msg.type === 'arena_result') paid(msg);
+      else if (msg.type === 'arena_agent') agentOrder(msg);
       else if (msg.type === 'arena_starter') applyStarter(msg);
     },
   };
